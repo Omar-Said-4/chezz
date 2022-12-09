@@ -8,7 +8,10 @@
 .STACK 64
 .DATA
 MULBYC DW 0
+drawbool db 0
 curr_draw dw 0
+SecondCellColor dw 0 
+CoolDownColor  db 0ch
 MULBYR DW 0
 WROOK DB '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*','$'  
   db '*', '*', '*', '*', '*', '*', '*', 0fh, 0fh, '*', 0fh, 0fh, '*', 0fh, 0fh, '*', 0fh, 0fh, '*', 0fh, 0fh,'$' 
@@ -331,17 +334,13 @@ play:
                 CALL FAR PTR CheckP1Moves
                 CALL FAR PTR CheckP2Moves
                 CALL FAR PTR drawAllPieces
-                    popa
-                  Call Far PTR drawPlayer1
-                  Call Far PTR drawPlayer2
-                    pusha 
-                
+                CALL FAR PTR CheckPlayerOverlap
 
 
 
 jmp play
 hlt
-JMP O
+
 main endp
 
 
@@ -590,11 +589,11 @@ cmp ah,48h
 jnz not_up
 
 ; delete what is inside the buffer without reading
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+;push ax
+ ; mov ah,0ch
+ ; mov al,0
+  ;int 21h
+;pop ax   
 
 ; draw in its place
 mov al,Player1square
@@ -629,11 +628,11 @@ not_up:
 cmp ah,50h
 jnz not_down
 
-push ax
-mov ah,0ch
-mov al,0
-int 21h
-pop ax   
+;push ax
+;mov ah,0ch
+;mov al,0
+;int 21h
+;pop ax   
 
 mov al,Player1square
 mov ah,Player1square[1]
@@ -663,11 +662,11 @@ not_down:
 cmp ah,4Bh
 jnz not_left
 
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+;push ax
+ ; mov ah,0ch
+  ;mov al,0
+ ;; int 21h
+;pop ax   
 
 mov al,Player1square
 mov ah,Player1square[1]
@@ -701,11 +700,11 @@ cmp ah,4Dh
 jnz not_right
 
 ;flushing buffer
-push ax
-mov ah,0ch
-mov al,0
-int 21h
-pop ax   
+;push ax
+;mov ah,0ch
+;mov al,0
+;int 21h
+;pop ax   
 
 mov al,Player1square
 mov ah,Player1square[1]
@@ -762,11 +761,11 @@ cmp ah,17
 jnz not_w
 
 ; delete what is inside the buffer without reading
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+;push ax
+  ;mov ah,0ch
+  ;mov al,0
+  ;int 21h
+;pop ax   
 
 ; draw in its place
 mov al,Player2square
@@ -802,11 +801,11 @@ not_w:
 cmp ah,31
 jnz not_s
 
-push ax
-mov ah,0ch
-mov al,0
-int 21h
-pop ax   
+;push ax
+;mov ah,0ch
+;mov al,0
+;int 21h
+;pop ax   
 
 mov al,Player2square
 mov ah,Player2square[1]
@@ -836,11 +835,11 @@ not_s:
 cmp ah,30
 jnz not_a
 
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+;push ax
+ ; mov ah,0ch
+ ; mov al,0
+ ; int 21h
+;pop ax   
 
 mov al,Player2square
 mov ah,Player2square[1]
@@ -874,11 +873,11 @@ cmp ah,32
 jnz not_d
 
 ;flushing buffer
-push ax
-mov ah,0ch
-mov al,0
-int 21h
-pop ax   
+;push ax
+;mov ah,0ch
+;mov al,0
+;int 21h
+;pop ax   
 
 mov al,Player2square
 mov ah,Player2square[1]
@@ -963,7 +962,7 @@ drawSingleCell proc FAR
                     mov  bx,height
                     sub bx,si
                     mov  cx,wide
-                    mov al,0ch
+                    mov al,CoolDownColor
      ; put color on al
                   
                       ; draw one line of the box with cool down color 
@@ -1104,6 +1103,33 @@ MOV BX,MULBYR
 ret
 BY20 ENDP
 
-O:
-end main
+CheckPlayerOverlap proc far
+mov al,Player1square
+cmp al,Player2square
+jnz no_player_overlap
+mov al,Player1square[1]
+cmp al,Player2square[1]
+jnz no_player_overlap
+mov si,0
+mov bh,0
+mov bl,Player1square[1]
+mov  ax,bx
+mov bh,0
+mov si,10
+mov  bl,Player1square
+mov dx,0ah ;color 
+mov drawbool,1
+mov CoolDownColor,0bh
+CALL FAR PTR drawSingleCell
+jmp doneoverlap
+no_player_overlap:
+cmp drawbool,1
+jnz doneoverlap
+CALL FAR PTR drawPlayer1
+CALL FAR PTR drawPlayer2
+mov drawbool,0
+doneoverlap:
+ret
+CheckPlayerOverlap ENDP
 
+end main
