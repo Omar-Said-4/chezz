@@ -274,6 +274,9 @@ currPiece db '*'
 getrow db 1
 getcol db 4 
 
+
+
+
 Pieces      DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
             DB '*','*','*','*','*','*','*','*'
@@ -312,15 +315,17 @@ main proc FAR
                 pusha
                 call FAR PTR ChessBoard
                 popa
-                   Call Far PTR drawPlayer1
-                   Call Far PTR drawPlayer2
+
+                  Call Far PTR drawPlayer1
+                  Call Far PTR drawPlayer2
+                  
                 pusha 
                 CALL FAR PTR drawAllPieces
                 popa
 play:
 
-                CALL FAR PTR CheckP1Moves
-
+                ;CALL FAR PTR CheckP1Moves
+                CALL FAR PTR CheckP2Moves
                 CALL FAR PTR drawAllPieces
 
 
@@ -504,10 +509,14 @@ mov bl,drawCol
 mov  ax,bx
 mov bh,0
 mov  bl,drawRow
-mov dx,0ah
+mov dx,0ah ;color 
 CALL FAR PTR drawSingleCell
 ret
 drawPlayer1 ENDP
+
+
+
+
 drawPlayer2 proc far
 
 mov al,Player2square
@@ -559,6 +568,7 @@ mov al,[di]
 mov currPiece,al
 ret
 getCellData endp
+
 CheckP1Moves proc far
 
 mov ah,01h
@@ -569,12 +579,14 @@ int 16h
 cmp ah,48h
 jnz not_up
 
+; delete what is inside the buffer without reading
 push ax
-mov ah,0ch
-mov al,0
-int 21h
+  mov ah,0ch
+  mov al,0
+  int 21h
 pop ax   
 
+; draw in its place
 mov al,Player1square
 mov ah,Player1square[1]
 mov getrow,al
@@ -593,6 +605,7 @@ mov  bl,getrow
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
+
 cmp Player1square,0
 je not_normal_up
 dec Player1square
@@ -641,9 +654,9 @@ cmp ah,4Bh
 jnz not_left
 
 push ax
-mov ah,0ch
-mov al,0
-int 21h
+  mov ah,0ch
+  mov al,0
+  int 21h
 pop ax   
 
 mov al,Player1square
@@ -716,13 +729,190 @@ not_right:
 moved:
 ; flush buffer
 push ax
+  mov ah,0ch
+  mov al,0
+  int 21h
+pop ax   
+
+ret
+CheckP1Moves ENDP
+
+
+
+
+
+CheckP2Moves proc far
+
+mov ah,01h
+int 16h
+;mov dl,ah
+;mov ah,07         ;Read one char and put in al
+;int 21h  
+cmp ah,17
+jnz not_w
+
+; delete what is inside the buffer without reading
+push ax
+  mov ah,0ch
+  mov al,0
+  int 21h
+pop ax   
+
+; draw in its place
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getcol,ah
+Call Far PTR getCellData
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getcol,ah
+mov si,0
+mov bh,0
+mov bl,getcol
+mov  ax,bx
+mov bh,0
+mov  bl,getrow
+mov dl,currColor
+mov dh,0
+CALL FAR PTR drawSingleCell
+
+cmp Player2square,0
+je not_normal_w
+dec Player2square
+jmp normal_w
+not_normal_w:
+mov Player2square,7
+normal_w:
+CALL FAR PTR drawPlayer2
+jmp moved2
+
+not_w:
+cmp ah,31
+jnz not_s
+
+push ax
 mov ah,0ch
 mov al,0
 int 21h
 pop ax   
 
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getcol,ah
+Call Far PTR getCellData
+mov si,0
+mov bh,0
+mov bl,getcol
+mov  ax,bx
+mov bh,0
+mov  bl,getrow
+mov dl,currColor
+mov dh,0
+CALL FAR PTR drawSingleCell
+cmp Player2square,7
+je not_normal_s
+inc Player2square
+jmp normal_s
+not_normal_s:
+mov Player2square,0
+normal_s:
+CALL FAR PTR drawPlayer2
+jmp moved2
+not_s:
+
+cmp ah,30
+jnz not_a
+
+push ax
+  mov ah,0ch
+  mov al,0
+  int 21h
+pop ax   
+
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getcol,ah
+Call Far PTR getCellData
+mov si,0
+mov bh,0
+mov bl,getcol
+mov  ax,bx
+mov bh,0
+mov  bl,getrow
+mov dl,currColor
+mov dh,0
+CALL FAR PTR drawSingleCell
+mov cl,Player2square[1]
+cmp cl,0
+je not_normal_a
+dec cl
+mov Player2square[1],cl
+jmp normal_a
+not_normal_a:
+mov cl,7
+mov Player2square[1],cl
+normal_a:
+CALL FAR PTR drawPlayer2
+jmp moved2
+not_a:
+
+cmp ah,32
+jnz not_d
+
+;flushing buffer
+push ax
+mov ah,0ch
+mov al,0
+int 21h
+pop ax   
+
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getcol,ah
+Call Far PTR getCellData
+mov si,0
+mov bh,0
+mov bl,getcol
+mov  ax,bx
+mov bh,0
+mov  bl,getrow
+mov dl,currColor
+mov dh,0
+CALL FAR PTR drawSingleCell
+mov cl,Player2square[1]
+cmp cl,7
+je not_normal_d
+inc cl
+mov Player2square[1],cl
+jmp normal_d
+not_normal_d:
+mov cl,0
+mov Player2square[1],cl
+normal_d:
+CALL FAR PTR drawPlayer2
+jmp moved2
+not_d:
+
+
+moved2:
+; flush buffer
+push ax
+  mov ah,0ch
+  mov al,0
+  int 21h
+pop ax   
+
 ret
-CheckP1Moves ENDP
+
+CheckP2Moves ENDP
+
+
+
 
 drawSingleCell proc FAR
 
