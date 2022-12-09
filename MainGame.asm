@@ -327,10 +327,15 @@ main proc FAR
                 CALL FAR PTR drawAllPieces
                 popa
 play:
-                CALL FAR PTR CheckP1Moves
                 CALL FAR PTR drawAllPieces
+                CALL FAR PTR CheckP1Moves
                 CALL FAR PTR CheckP2Moves
                 CALL FAR PTR drawAllPieces
+                    popa
+                  Call Far PTR drawPlayer1
+                  Call Far PTR drawPlayer2
+                    pusha 
+                
 
 
 
@@ -733,11 +738,11 @@ not_right:
 
 moved:
 ; flush buffer
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+; push ax
+;   mov ah,0ch
+;   mov al,0
+;   int 21h
+; pop ax   
 
 ret
 CheckP1Moves ENDP
