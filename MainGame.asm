@@ -285,7 +285,7 @@ getcol db 4
 temprow db 0
 tempcol db 0
 
-
+Clearbool db 0
 
 
 
@@ -294,20 +294,21 @@ tempcol db 0
 
 Pieces      DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
-            DB '*','h','*','h','h','*','*','*'
-            DB '*','*','*','*','h','*','*','*'
-            DB '*','k','*','*','*','*','*','*'
-            DB '*','*','*','*','*','h','*','*'
-            DB 'p','p','p','p','p','p','p','p'
+            DB '*','h','*','h','*','h','*','H'
+            DB '*','P','r','*','*','R','*','h'
+            DB '*','*','B','k','B','*','*','*'
+            DB '*','*','*','Q','Q','H','*','*'
+            DB 'p','p','p','p','P','p','p','p'
             DB 'r','h','b','k','q','b','h','r'
             
 
-db ?
 
 
 CurrentMovesColumn DB 32 dup("|")
 CurrentMovesRow DB 32 dup("|")
+CurrentMovesColors DB 32 dup(0eh)
 
+ColorOffset DW 0
 
 wide     equ 40
 height   equ 20
@@ -599,6 +600,11 @@ CheckP1Moves proc far
 
 mov ah,01h
 int 16h
+jnz clr1
+jmp notclr1
+clr1:
+inc Clearbool
+notclr1:
 ;mov dl,ah
 ;mov ah,07         ;Read one char and put in al
 ;int 21h  
@@ -1239,11 +1245,13 @@ CheckPlayerOverlap ENDP
 GetAvaliableMoves proc far
 
 ;lea BX,CurrentMovesRow
+Mov ColorOffset,0
 xor SI,SI
 lea SI , CurrentMovesRow
 ;mov SI,BX
 cmp clipBoardP1,'*'
 jne flagNoPieceHelp
+xor di,di
 lea di,CurrentMovesColumn
 mov ah,01h
 int 16h
@@ -1284,8 +1292,11 @@ mov clipBoardP1,bl
 ; pawn movements
 ;!pawn
   cmp bl,"p"
-  jne notp
-
+  jne notphelp
+  jmp isp
+  notphelp:
+  jmp notp
+  isp:
   dec getrow
   pusha
   CAll far ptr getCellData
@@ -1299,7 +1310,13 @@ mov clipBoardP1,bl
   inc si
   mov [di],ch
   inc di
-
+  push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   notEmpty1:
   dec getcol
   pusha
@@ -1315,9 +1332,19 @@ mov clipBoardP1,bl
   inc si
   mov [di],ch
   inc di
+  push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
   alliep1:
   inc getcol
   inc getcol
+  pusha
+  CAll far ptr getCellData
+  popa
   cmp currPiece,"*"
   je alliep2
   cmp currPiece,"R"
@@ -1326,6 +1353,13 @@ mov clipBoardP1,bl
   mov cl,getrow
   mov [si],cl
   mov [di],ch
+  push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
   alliep2:
   jmp flagNoPiece 
 
@@ -1361,6 +1395,13 @@ mov clipBoardP1,bl
   mov [di],ch
   inc si
   inc di
+  push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getrow
   jmp notenemyr
   enemyr:
@@ -1370,6 +1411,13 @@ mov clipBoardP1,bl
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
   jmp notupr
   ; change color ya ali
   notenemyr:
@@ -1407,6 +1455,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     jmp notenemyrd
     enemyrd:
@@ -1416,6 +1471,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdownr
     ; change color ya ali
     notenemyrd:
@@ -1450,6 +1512,13 @@ mov clipBoardP1,bl
     mov cl,getrow
     mov [si],cl
     mov [di],ch
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc si
     inc di
     dec getCol
@@ -1461,6 +1530,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notleftr
     ; change color ya ali
     notenemyrl:
@@ -1501,6 +1577,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getCol
     jmp notenemyrr
     enemyrr:
@@ -1510,6 +1593,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notrightr
     ; change color ya ali
     notenemyrr:
@@ -1556,6 +1646,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     dec getrow
     inc getCol
     jmp notenemybu
@@ -1566,6 +1663,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalupb
     ; change color ya ali
     notenemybu:
@@ -1615,6 +1719,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     dec getrow
     dec getCol
     jmp notenemybul
@@ -1625,6 +1736,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalupbl
     ; change color ya ali
     notenemybul:
@@ -1679,6 +1797,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     inc getCol
     jmp notenemybd
@@ -1689,6 +1814,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalDownb
     ; change color ya ali
     notenemybd:
@@ -1735,6 +1867,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     dec getCol
     jmp notenemybdl
@@ -1745,6 +1884,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalDownbl
     ; change color ya ali
     notenemybdl:
@@ -1787,6 +1933,13 @@ mov clipBoardP1,bl
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getrow
   jmp notenemyq
   enemyq:
@@ -1796,6 +1949,13 @@ mov clipBoardP1,bl
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
   jmp notupq
   ; change color ya ali
   notenemyq:
@@ -1836,6 +1996,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     jmp notenemyqd
     enemyqd:
@@ -1845,6 +2012,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdownq
     ; change color ya ali
     notenemyqd:
@@ -1881,6 +2055,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     dec getCol
     jmp notenemyql
     enemyql:
@@ -1890,6 +2071,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notleftq
     ; change color ya ali
     notenemyql:
@@ -1930,6 +2118,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getCol
     jmp notenemyqr
     enemyqr:
@@ -1939,6 +2134,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notrightq
     ; change color ya ali
     notenemyqr:
@@ -1988,6 +2190,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     dec getrow
     inc getCol
     jmp notenemyqu
@@ -1998,6 +2207,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalupq
     ; change color ya ali
     notenemyqu:
@@ -2047,6 +2263,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     dec getrow
     dec getCol
     jmp notenemyqul
@@ -2057,6 +2280,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalupql
     ; change color ya ali
     notenemyqul:
@@ -2111,6 +2341,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     inc getCol
     jmp notenemyqdd
@@ -2121,6 +2358,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalDownq
     ; change color ya ali
     notenemyqdd:
@@ -2168,6 +2412,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     inc getrow
     dec getCol
     jmp notenemyqdl
@@ -2178,6 +2429,13 @@ mov clipBoardP1,bl
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notdiagonalDownlq
     ; change color ya ali
     notenemyqdl:
@@ -2220,6 +2478,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getrow
   jmp notenemyk
   enemyk:
@@ -2229,6 +2494,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemyk:
     ;jmp notupr 
@@ -2265,6 +2537,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getrow
   inc getCol
   jmp notenemyDRk
@@ -2275,6 +2554,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemyDRK:
     ;jmp notupr 
@@ -2312,6 +2598,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getrow
   dec getCol
   jmp notenemyDLk
@@ -2322,6 +2615,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemyDLK:
     ;jmp notupr 
@@ -2360,6 +2660,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   inc getrow
   inc getCol
   jmp notenemyDDLk
@@ -2370,6 +2677,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemyDDLK:
     ;jmp notupr 
@@ -2406,6 +2720,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   inc getrow
   dec getCol
   jmp notenemyDDLkd
@@ -2416,6 +2737,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemyDDLKd:
     ;jmp notupr 
@@ -2447,6 +2775,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   inc getrow
   jmp notenemykd
   enemykd:
@@ -2456,6 +2791,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemykd:
     ;jmp notupr 
@@ -2491,6 +2833,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   inc getCol
   jmp notenemykr
   enemykr:
@@ -2500,6 +2849,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemykr:
     ;jmp notupr 
@@ -2535,6 +2891,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   dec getCol
   jmp notenemykl
   enemykl:
@@ -2544,6 +2907,13 @@ notq:
   mov [di],ch
   inc si
   inc di
+   push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
     ; change color ya ali
   notenemykl:
     ;jmp notupr 
@@ -2601,6 +2971,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notenemyDRh
     enemyDRh:
     mov ch,getcol
@@ -2609,6 +2986,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh:
       ;jmp notupr 
@@ -2651,8 +3035,16 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
 
-    dec getrow
+    inc getrow
+    inc getrow
     inc getCol
     jmp notenemyDRh1
     enemyDRh1:
@@ -2662,6 +3054,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh1:
       ;jmp notupr 
@@ -2702,8 +3101,13 @@ notq:
     mov [di],ch
     inc si
     inc di
-    dec getrow
-    inc getCol
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notenemyDRh2
     enemyDRh2:
     ;mov ch,getcol
@@ -2712,6 +3116,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh2:
       ;jmp notupr 
@@ -2721,7 +3132,7 @@ notq:
 
 
 
-      mov cl,temprow
+    mov cl,temprow
     mov getrow,cl
     mov cl,tempcol
     mov getcol,cl
@@ -2753,6 +3164,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+    push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   
     jmp notenemyDRh3
     enemyDRh3:
@@ -2762,6 +3180,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+    push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh3:
       ;jmp notupr 
@@ -2778,15 +3203,14 @@ notq:
     inc getrow
     dec getCol
     dec getCol
-
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph4
     mov cl,getCol
     cmp cl,-1
     je nodiagonalRhelph4
     mov ch,getCol
     cmp ch,-2
+    je nodiagonalRhelph4
+    mov cl,getrow
+    cmp cl,8
     je nodiagonalRhelph4
     pusha
       Call FAR PTR getCellData
@@ -2802,6 +3226,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   
     jmp notenemyDRh4
     enemyDRh4:
@@ -2811,6 +3242,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh4:
       ;jmp notupr 
@@ -2825,18 +3263,17 @@ notq:
     mov cl,tempcol
     mov getcol,cl
 
-    inc getrow
+    dec getrow
     inc getCol
     inc getCol
-
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph5
     mov cl,getCol
     cmp cl,9
     je nodiagonalRhelph5
     mov ch,getCol
     cmp ch,8
+    je nodiagonalRhelph5
+    mov cl,getrow
+    cmp cl,-1
     je nodiagonalRhelph5
     pusha
       Call FAR PTR getCellData
@@ -2852,6 +3289,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+    push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
   
     jmp notenemyDRh5
     enemyDRh5:
@@ -2861,6 +3305,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh5:
       ;jmp notupr 
@@ -2910,6 +3361,13 @@ notq:
       mov [di],ch
       inc si
       inc di
+       push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     
     jmp notenemyDRh7
     enemyDRh7:
@@ -2919,6 +3377,13 @@ notq:
     mov [di],ch
     inc si
     inc di
+     push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh7:
       ;jmp notupr 
@@ -2934,14 +3399,17 @@ notq:
     popa
 
     add getcol,2
-    dec getrow
+    inc getrow
 
 
     mov cl,getCol
     cmp cl,8
     je nodiagonalRhelph8
+    mov cl,getCol
+    cmp cl,9
+    je nodiagonalRhelph8
     mov cl,getrow
-    cmp cl,-1
+    cmp cl,8
     je nodiagonalRhelph8
     ;? error here ch and cl 
     mov ch,getCol
@@ -2960,7 +3428,13 @@ notq:
       mov [di],ch
       inc si
       inc di
-    
+        push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0eh
+  mov [si],cx
+  inc ColorOffset
+  pop si
     jmp notenemyDRh8
     enemyDRh8:
     ;mov ch,getcol
@@ -2969,6 +3443,13 @@ notq:
       mov [di],ch
       inc si
       inc di
+       push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov cx,0ch
+  mov [si],cx
+  inc ColorOffset
+  pop si
       ; change color ya ali
     notenemyDRh8:
       ;jmp notupr 
@@ -2987,9 +3468,17 @@ flagNoPiece:
 
 
 push ax
+cmp Clearbool,1
+je clrf
+jmp notclrf
+clrf:
   mov ah,0ch
   mov al,0
   int 21h
+  dec Clearbool
+  notclrf:
+ ;mov  ah, 00h        ; BIOS.ReadKeyboardCharacter
+ ; int  16h 
 pop ax  
 
 ret
@@ -3005,7 +3494,7 @@ xor SI,SI
 lea SI, CurrentMovesRow
 lea di,CurrentMovesColumn
 
-
+mov ColorOffset,0
 
 LoopHighlight:
 
@@ -3019,8 +3508,13 @@ mov bx,0
 
 mov bl,[si]
 mov al,[di]
-
-mov dx,0eh
+push si
+  lea si,CurrentMovesColors
+  add si,ColorOffset
+  mov dx,[si]
+  inc ColorOffset
+  pop si
+;mov dx,0eh
 pusha
 CALL FAR PTR drawBorder
 popa
