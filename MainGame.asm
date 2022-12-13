@@ -229,7 +229,7 @@ BPAWN DB'*', '*', '*','*', '*', '*', '*', '*','*', '*', '*', 00h, 00h, 00h, 00h,
   DB '*', '*', '*', '*','*', '*', '*', '*', '*', 00h, 00h, 00h, 00h, 00h, 0fh, 00h, 00h, 00h, 00h, 00h,'$'
   DB '*', '*', '*', '*', '*', '*', '*', '*', '*',00h, 00h, 00h, 00h, 00h, 0fh, 00h, 00h, 00h, 00h, 00h,'$'
   DB '*', '*', '*', '*', '*', '*', '*', '*', '*','*', 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, '$'
-  DB '*', '*', '*', '*', '*', '*', '*', '*', '*','*', 00h, 00h, 00h, , 00h, 00h, 00h, 00h, 00h, '$'
+  DB '*', '*', '*', '*', '*', '*', '*', '*', '*','*', 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, '$'
   DB '*', '*', '*', '*','*', '*', '*', '*', '*', '*', '*', 00h, 00h, 00h, 00h, 00h, 00h, 00h, '$'
   DB '*', '*', '*', '*', '*', '*', '*', '*', '*','*', '*', 00h, 00h, 00h, 00h, 00h, 00h, 00h, '$'
   DB '*', '*', '*', '*', '*', '*', '*', '*', '*','*', '*', 00h, 00h, 00h, 00h, 00h, 00h, 00h, '$'
@@ -274,8 +274,16 @@ currColor db 00h
 
 currPiece db '*'
 
+
+clipBoardP1 db '*'
+
+
 getrow db 1
 getcol db 4 
+
+
+temprow db 0
+tempcol db 0
 
 
 
@@ -286,14 +294,19 @@ getcol db 4
 
 Pieces      DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
-            DB '*','*','*','*','*','*','*','*'
-            DB '*','*','*','*','*','*','*','*'
-            DB '*','*','*','*','*','*','*','*'
-            DB '*','*','*','*','*','*','*','*'
+            DB '*','h','*','h','h','*','*','*'
+            DB '*','*','*','*','h','*','*','*'
+            DB '*','k','*','*','*','*','*','*'
+            DB '*','*','*','*','*','h','*','*'
             DB 'p','p','p','p','p','p','p','p'
             DB 'r','h','b','k','q','b','h','r'
             
 
+db ?
+
+
+CurrentMovesColumn DB 32 dup("|")
+CurrentMovesRow DB 32 dup("|")
 
 
 wide     equ 40
@@ -335,6 +348,12 @@ play:
                 CALL FAR PTR CheckP2Moves
                 CALL FAR PTR drawAllPieces
                 CALL FAR PTR CheckPlayerOverlap
+              ; pusha
+                CALL FAR PTR GetAvaliableMoves
+              ;  popa 
+
+
+                CALL FAR PTR HighlighCells
 
 
 
@@ -522,8 +541,6 @@ mov dx,0ah ;color
 CALL FAR PTR drawSingleCell
 ret
 drawPlayer1 ENDP
-
-
 
 
 drawPlayer2 proc far
@@ -910,11 +927,11 @@ not_d:
 
 moved2:
 ; flush buffer
-push ax
-  mov ah,0ch
-  mov al,0
-  int 21h
-pop ax   
+;push ax
+ ; mov ah,0ch
+  ;mov al,0
+  ;int 21h
+;pop ax   
 
 ret
 
@@ -1003,6 +1020,92 @@ drawSingleCell proc FAR
                     jne  looping1
                     ret
 drawSingleCell endp
+
+
+
+
+drawBorder proc FAR
+                  ; mov  ah,0
+                  ; mov  al,13h
+                  ; int  10h
+    ; bx contain row number
+    ; ax contain Column number
+    ; dx contains first color
+    ; si contains second color height
+
+    ; width * column + height * 320 * row
+                  
+    ;               mov bh,0
+    ;               mov bl,drawCol
+    ;               mov  ax,bx
+    ;               mov bh,0
+    ;               mov  bl,drawRow
+    ;               mov  dx,3
+                   ;mov si,10
+        ; ;oushing dx to save color
+                    push dx
+     ; computing the equtation
+                    mov  cx ,wide
+                    mul  cx
+                    xchg ax,bx
+                    mov  cx, height
+                    mul  cx
+                    mov  cx,320
+                    mul  cx
+                    add  ax,bx
+                    mov  di, ax
+                    pop  dx
+
+                    mov cx,40
+                  ; draw one line of the box
+
+                  mov  al,dl
+                  looping1235:       
+                  rep  stosb
+                  dec  bx
+
+                  
+                  sub di,39
+
+                  pusha
+                    mov bp , 20
+                    drawlineVertical:
+                    mov cx,1
+                    add  di,319
+                    rep  stosb
+                    dec bp
+                    cmp bp,0
+                    jne drawlineVertical
+                  popa
+                  
+
+
+                  pusha
+                    add di,39
+                    mov bp , 20
+                    drawlineVertical2nd:
+                    mov cx,1
+                    add  di,319
+                    rep  stosb
+                    dec bp
+                    cmp bp,0
+                    jne drawlineVertical2nd
+                  popa
+
+                  
+                  add di,6400
+                  
+
+                  mov cx,39
+                  mov  al,dl
+                  looping12357:       
+                  rep  stosb
+                  dec  bx
+ret
+drawBorder endp
+
+
+
 DrawPiece    PROC FAR
 ;swich to graphics mode
 ;mov ah,0
@@ -1132,4 +1235,1803 @@ doneoverlap:
 ret
 CheckPlayerOverlap ENDP
 
+
+GetAvaliableMoves proc far
+
+;lea BX,CurrentMovesRow
+xor SI,SI
+lea SI , CurrentMovesRow
+;mov SI,BX
+cmp clipBoardP1,'*'
+jne flagNoPieceHelp
+lea di,CurrentMovesColumn
+mov ah,01h
+int 16h
+;mov dl,ah
+;mov ah,07         ;Read one char and put in al
+;int 21h  
+
+cmp ah,28
+jne flagNoPieceHelp
+jmp notjump
+flagNoPieceHelp:
+jmp flagNoPiece
+notjump:
+Mov al,Player1square
+Mov getrow,al
+mov al,Player1square[1]
+mov getcol,al
+pusha
+  CAll far ptr getCellData
+popa
+
+pusha
+  mov cl,getrow
+  mov temprow,cl
+
+  mov cl,getcol
+  mov tempcol,cl
+popa
+
+mov bl,currPiece
+cmp bl,"*"
+je flagNoPieceHelpr
+jmp NotflagnoPiece
+flagNoPieceHelpr:
+jmp flagNoPiece
+NotflagnoPiece:
+mov clipBoardP1,bl
+; pawn movements
+;!pawn
+  cmp bl,"p"
+  jne notp
+
+  dec getrow
+  pusha
+  CAll far ptr getCellData
+  popa
+  cmp currPiece,"*"
+  jne notEmpty1
+
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  inc si
+  mov [di],ch
+  inc di
+
+  notEmpty1:
+  dec getcol
+  pusha
+  CAll far ptr getCellData
+  popa
+  cmp currPiece,"*"
+  je alliep1
+  cmp currPiece,"R"
+  JA alliep1 
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  inc si
+  mov [di],ch
+  inc di
+  alliep1:
+  inc getcol
+  inc getcol
+  cmp currPiece,"*"
+  je alliep2
+  cmp currPiece,"R"
+  JA alliep2
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  alliep2:
+  jmp flagNoPiece 
+
+  notp:
+
+
+;!rock
+  cmp bl,"r"
+  jne notrhelp
+  jmp yesr
+  notrhelp:
+  jmp notr
+  yesr:
+
+
+  ;? Checked 
+  dec getrow
+  checkupr:
+  mov cl,getrow
+  cmp cl,-1
+  je noUphelpr
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noUphelpr
+  cmp currPiece,'*'
+  jne enemyr
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getrow
+  jmp notenemyr
+  enemyr:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  jmp notupr
+  ; change color ya ali
+  notenemyr:
+  jmp checkupr
+  ;jmp notupr 
+  noUphelpr:
+
+  notupr:
+
+
+
+
+
+  ;?Checked 
+
+    mov cl , temprow
+    mov getrow , cl
+    inc getrow
+
+    checkdownr:
+    mov cl,getrow
+    cmp cl,8
+    je nodownhelpr
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodownhelpr
+    cmp currPiece,'*'
+    jne enemyrd
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    jmp notenemyrd
+    enemyrd:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdownr
+    ; change color ya ali
+    notenemyrd:
+    jmp checkdownr
+    ;jmp notupr 
+    nodownhelpr:
+
+    notdownr:
+
+
+    ;?Checked
+    mov cl , temprow
+    mov getrow , cl
+
+
+    dec getcol
+
+
+    checkleftr:
+    mov cl,getCol
+    cmp cl,-1
+    je nolefthelpr
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nolefthelpr
+    cmp currPiece,'*'
+    jne enemyrl
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getCol
+    jmp notenemyrl
+    enemyrl:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notleftr
+    ; change color ya ali
+    notenemyrl:
+    jmp checkleftr
+    ;jmp notupr 
+    nolefthelpr:
+
+    notleftr:
+
+
+
+
+    mov cl , temprow
+    mov getrow , cl
+
+    mov cl,tempcol
+    mov getcol , cl
+
+
+    inc getcol
+
+
+    checkrightr:
+    mov cl,getCol
+    cmp cl,8
+    je norighthelpr
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg norighthelpr
+    cmp currPiece,'*'
+    jne enemyrr
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getCol
+    jmp notenemyrr
+    enemyrr:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notrightr
+    ; change color ya ali
+    notenemyrr:
+    jmp checkrightr
+    ;jmp notupr 
+    norighthelpr:
+
+    notrightr:
+    jmp flagNoPiece
+
+
+  notr:
+
+;!bishop
+  cmp bl,"b"
+  jne notbishophelp
+  jmp bishopb
+  notbishophelp:
+  jmp notb
+  bishopb:
+  dec getrow
+  inc getcol
+
+  diagonalUp:
+  mov cl,getrow
+    cmp cl,-1
+    je nodiagonalUp
+  mov cl,getCol
+    cmp cl,8
+    je nodiagonalUp 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalUp
+    cmp currPiece,'*'
+    jne enemybu
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getrow
+    inc getCol
+    jmp notenemybu
+    enemybu:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalupb
+    ; change color ya ali
+    notenemybu:
+    jmp diagonalUp
+    ;jmp notupr 
+    nodiagonalUp:
+
+    notdiagonalupb:
+
+
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  dec getrow
+  dec getcol
+
+  diagonalUpl:
+  mov cl,getrow
+    cmp cl,-1
+    je nodiagonalUpl
+  mov cl,getCol
+    cmp cl,-1
+    je nodiagonalUpl 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalUpl
+    cmp currPiece,'*'
+    jne enemybul
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getrow
+    dec getCol
+    jmp notenemybul
+    enemybul:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalupbl
+    ; change color ya ali
+    notenemybul:
+    jmp diagonalUpl
+    ;jmp notupr 
+    nodiagonalUpl:
+
+    notdiagonalupbl:
+
+
+
+
+
+
+
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  inc getrow
+  inc getcol
+
+  diagonalDown:
+  mov cl,getrow
+    cmp cl,8
+    je nodiagonalDown
+  mov cl,getCol
+    cmp cl,8
+    je nodiagonalDown 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalDown
+    cmp currPiece,'*'
+    jne enemybd
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    inc getCol
+    jmp notenemybd
+    enemybd:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalDownb
+    ; change color ya ali
+    notenemybd:
+    jmp diagonalDown
+    ;jmp notupr 
+    nodiagonalDown:
+
+    notdiagonalDownb:
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  inc getrow
+  dec getcol
+
+  diagonalDownl:
+  mov cl,getrow
+    cmp cl,8
+    je nodiagonalDownl
+  mov cl,getCol
+    cmp cl,-1
+    je nodiagonalDownl
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalDownl
+    cmp currPiece,'*'
+    jne enemybdl
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    dec getCol
+    jmp notenemybdl
+    enemybdl:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalDownbl
+    ; change color ya ali
+    notenemybdl:
+    jmp diagonalDownl
+    ;jmp notupr 
+    nodiagonalDownl:
+
+    notdiagonalDownbl:
+    jmp flagNoPiece
+
+  notb:
+
+
+;!queen
+  cmp bl,'q'
+  jne notqhelp
+  jmp yesq
+  notqhelp:
+  jmp notq
+  yesq:
+
+
+
+  dec getrow
+  checkupq:
+  mov cl,getrow
+  cmp cl,-1
+  je noUphelpq
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noUphelpq
+  cmp currPiece,'*'
+  jne enemyq
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getrow
+  jmp notenemyq
+  enemyq:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  jmp notupq
+  ; change color ya ali
+  notenemyq:
+  jmp checkupq
+  ;jmp notupr 
+  noUphelpq:
+
+  notupq:
+
+
+
+
+
+
+
+
+  ;?Checked 
+
+    mov cl , temprow
+    mov getrow , cl
+    inc getrow
+
+    checkdownq:
+    mov cl,getrow
+    cmp cl,8
+    je nodownhelpq
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodownhelpq
+    cmp currPiece,'*'
+    jne enemyqd
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    jmp notenemyqd
+    enemyqd:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdownq
+    ; change color ya ali
+    notenemyqd:
+    jmp checkdownq
+    ;jmp notupr 
+    nodownhelpq:
+
+    notdownq:
+
+
+    ;?Checked
+    mov cl , temprow
+    mov getrow , cl
+
+
+    dec getcol
+
+
+    checkleftq:
+    mov cl,getCol
+    cmp cl,-1
+    je nolefthelpq
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nolefthelpq
+    cmp currPiece,'*'
+    jne enemyql
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getCol
+    jmp notenemyql
+    enemyql:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notleftq
+    ; change color ya ali
+    notenemyql:
+    jmp checkleftq
+    ;jmp notupr 
+    nolefthelpq:
+
+    notleftq:
+
+
+
+
+    mov cl , temprow
+    mov getrow , cl
+
+    mov cl,tempcol
+    mov getcol , cl
+
+
+    inc getcol
+
+
+    checkrightq:
+    mov cl,getCol
+    cmp cl,8
+    je norighthelpq
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg norighthelpq
+    cmp currPiece,'*'
+    jne enemyqr
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getCol
+    jmp notenemyqr
+    enemyqr:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notrightq
+    ; change color ya ali
+    notenemyqr:
+    jmp checkrightq
+    ;jmp notupr 
+    norighthelpq:
+
+    notrightq:
+
+
+
+
+
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+  mov cl,getrow
+  mov getrow,cl
+  dec getrow
+  inc getcol
+
+  diagonalUpq:
+  mov cl,getrow
+    cmp cl,-1
+    je nodiagonalUpq
+  mov cl,getCol
+    cmp cl,8
+    je nodiagonalUpq 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalUpq
+    cmp currPiece,'*'
+    jne enemyqu
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getrow
+    inc getCol
+    jmp notenemyqu
+    enemyqu:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalupq
+    ; change color ya ali
+    notenemyqu:
+    jmp diagonalUpq
+    ;jmp notupr 
+    nodiagonalUpq:
+
+    notdiagonalupq:
+
+
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  dec getrow
+  dec getcol
+
+  diagonalUplq:
+  mov cl,getrow
+    cmp cl,-1
+    je nodiagonalUplq
+  mov cl,getCol
+    cmp cl,-1
+    je nodiagonalUplq 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalUplq
+    cmp currPiece,'*'
+    jne enemyqul
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getrow
+    dec getCol
+    jmp notenemyqul
+    enemyqul:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalupql
+    ; change color ya ali
+    notenemyqul:
+    jmp diagonalUplq
+    ;jmp notupr 
+    nodiagonalUplq:
+
+    notdiagonalupql:
+
+
+
+
+
+
+
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  inc getrow
+  inc getcol
+
+  diagonalDownq:
+  mov cl,getrow
+    cmp cl,8
+    je nodiagonalDownq
+  mov cl,getCol
+    cmp cl,8
+    je nodiagonalDownq 
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalDownq
+    cmp currPiece,'*'
+    jne enemyqdd
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    inc getCol
+    jmp notenemyqdd
+    enemyqdd:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalDownq
+    ; change color ya ali
+    notenemyqdd:
+    jmp diagonalDownq
+    ;jmp notupr 
+    nodiagonalDownq:
+
+    notdiagonalDownq:
+
+
+
+
+
+
+  mov cl,tempcol
+  mov getCol,cl
+
+  mov cl,temprow
+  mov getrow,cl
+
+
+  inc getrow
+  dec getcol
+
+  diagonalDownlq:
+  mov cl,getrow
+    cmp cl,8
+    je nodiagonalDownlq
+  mov cl,getCol
+    cmp cl,-1
+    je nodiagonalDownlq
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalDownlq
+    cmp currPiece,'*'
+    jne enemyqdl
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    inc getrow
+    dec getCol
+    jmp notenemyqdl
+    enemyqdl:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notdiagonalDownlq
+    ; change color ya ali
+    notenemyqdl:
+    jmp diagonalDownlq
+    ;jmp notupr 
+    nodiagonalDownlq:
+
+  notdiagonalDownlq:
+  jmp  flagNoPiece
+
+
+notq:
+
+
+;!King
+
+  cmp bl,'k'
+  jne notkhelp
+  jmp yesk
+  notkhelp:
+  jmp notk
+  yesk:
+
+  dec getrow
+  
+  mov cl,getrow
+  cmp cl,-1
+  je noUphelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noUphelpk
+  cmp currPiece,'*'
+  jne enemyk
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getrow
+  jmp notenemyk
+  enemyk:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemyk:
+    ;jmp notupr 
+  noUphelpk:
+
+  notupk:
+
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+  dec getrow
+  inc getCol
+
+  mov cl,getrow
+  cmp cl,-1
+  je nodiagonalRhelpk
+  mov ch,getCol
+  cmp ch,8
+  je nodiagonalRhelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg nodiagonalRhelpk
+  cmp currPiece,'*'
+  jne enemyDRk
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getrow
+  inc getCol
+  jmp notenemyDRk
+  enemyDRk:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemyDRK:
+    ;jmp notupr 
+  nodiagonalRhelpk:
+
+  notdiagonalRk:
+  ; moving by the diagonal
+
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+  dec getrow
+  dec getCol
+
+  mov cl,getrow
+  cmp cl,-1
+  je nodiagonalLhelpk
+  mov ch,getCol
+  cmp ch,-1
+  je nodiagonalLhelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg nodiagonalLhelpk
+  cmp currPiece,'*'
+  jne enemyDLk
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getrow
+  dec getCol
+  jmp notenemyDLk
+  enemyDLk:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemyDLK:
+    ;jmp notupr 
+  nodiagonalLhelpk:
+
+  notdiagonalLk:
+  ; moving by the diagonal
+
+
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+  inc getrow
+  inc getCol
+
+  mov cl,getrow
+  cmp cl,8
+  je nodiagonalDLhelpk
+  mov ch,getCol
+  cmp ch,8
+  je nodiagonalDLhelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg nodiagonalDLhelpk
+  cmp currPiece,'*'
+  jne enemyDDLk
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  inc getrow
+  inc getCol
+  jmp notenemyDDLk
+  enemyDDLk:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemyDDLK:
+    ;jmp notupr 
+  nodiagonalDLhelpk:
+
+  notdiagonalDLk:
+  ; moving by the diagonal
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+  inc getrow
+  dec getCol
+
+  mov cl,getrow
+  cmp cl,8
+  je nodiagonalDLhelpkd
+  mov ch,getCol
+  cmp ch,-1
+  je nodiagonalDLhelpkd
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg nodiagonalDLhelpkd
+  cmp currPiece,'*'
+  jne enemyDDLkd
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  inc getrow
+  dec getCol
+  jmp notenemyDDLkd
+  enemyDDLkd:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemyDDLKd:
+    ;jmp notupr 
+  nodiagonalDLhelpkd:
+
+  notdiagonalDLkd:
+  
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+  inc getrow
+  
+  mov cl,getrow
+  cmp cl,8
+  je noDownhelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noDownhelpk
+  cmp currPiece,'*'
+  jne enemykd
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  inc getrow
+  jmp notenemykd
+  enemykd:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemykd:
+    ;jmp notupr 
+  noDownhelpk:
+
+  notDownk:
+
+
+
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+
+  inc getCol
+  
+  mov cl,getCol
+  cmp cl,8
+  je noRighthelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noRighthelpk
+  cmp currPiece,'*'
+  jne enemykr
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  inc getCol
+  jmp notenemykr
+  enemykr:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemykr:
+    ;jmp notupr 
+  noRighthelpk:
+
+  notRightk:
+
+
+
+
+  mov cl,temprow
+  mov getrow,cl
+  mov cl,tempcol
+  mov getcol,cl
+
+
+  dec getCol
+  
+  mov cl,getCol
+  cmp cl,-1
+  je noLefthelpk
+  pusha
+    Call FAR PTR getCellData
+  popa
+
+  cmp currPiece,'a'
+  jg noLefthelpk
+  cmp currPiece,'*'
+  jne enemykl
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+  dec getCol
+  jmp notenemykl
+  enemykl:
+  mov ch,getcol
+  mov cl,getrow
+  mov [si],cl
+  mov [di],ch
+  inc si
+  inc di
+    ; change color ya ali
+  notenemykl:
+    ;jmp notupr 
+  noLefthelpk:
+
+  notLeftk:
+    jmp flagNoPiece
+
+
+
+
+  notk:
+
+;! Horse
+    cmp bl,"h"
+    jne nothhelp
+    jmp yesh
+    nothhelp:
+    jmp noth
+    yesh:
+    
+    ; mov cl,temprow
+    ; mov getrow,cl
+    ; mov cl,tempcol
+    ; mov getcol,cl
+
+    dec getrow
+    dec getrow
+    inc getCol
+
+
+    mov cl,getrow
+    cmp cl,-1
+    je nodiagonalRhelph
+
+    mov cl,getrow
+    cmp cl,-2
+    je nodiagonalRhelph
+
+   
+    mov ch,getCol
+    cmp ch,8
+    je nodiagonalRhelph
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph
+    cmp currPiece,'*'
+    jne enemyDRh
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    jmp notenemyDRh
+    enemyDRh:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh:
+      ;jmp notupr 
+    nodiagonalRhelph:
+
+    notdiagonalRh:
+    
+
+
+    ;2nd part
+    mov cl,temprow
+    mov getrow,cl
+    mov cl,tempcol
+    mov getcol,cl
+
+    dec getrow
+    dec getrow
+    dec getCol
+
+    mov cl,getrow
+    cmp cl,-1
+    je nodiagonalRhelph1
+    mov cl,getrow
+    cmp cl,-2
+    je nodiagonalRhelph1
+    mov ch,getCol
+    cmp ch,-1
+    je nodiagonalRhelph1
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph1
+    cmp currPiece,'*'
+    jne enemyDRh1
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+
+    dec getrow
+    inc getCol
+    jmp notenemyDRh1
+    enemyDRh1:
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh1:
+      ;jmp notupr 
+    nodiagonalRhelph1:
+
+    notdiagonalRh1:
+    
+      
+    mov cl,temprow
+    mov getrow,cl
+    mov cl,tempcol
+    mov getcol,cl
+
+    inc getrow
+    inc getrow
+    dec getCol
+
+    mov cl,getrow
+    cmp cl,8
+    je nodiagonalRhelph2
+    mov cl,getrow
+    cmp cl,9
+    je nodiagonalRhelph2
+    mov ch,getCol
+    cmp ch,-1
+    je nodiagonalRhelph2
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph2
+    cmp currPiece,'*'
+    jne enemyDRh2
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+    dec getrow
+    inc getCol
+    jmp notenemyDRh2
+    enemyDRh2:
+    ;mov ch,getcol
+    ;mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh2:
+      ;jmp notupr 
+    nodiagonalRhelph2:
+
+    notdiagonalRh2:
+
+
+
+      mov cl,temprow
+    mov getrow,cl
+    mov cl,tempcol
+    mov getcol,cl
+
+    inc getrow
+    inc getrow
+    inc getCol
+
+    mov cl,getrow
+    cmp cl,8
+    je nodiagonalRhelph3
+    mov cl,getrow
+    cmp cl,9
+    je nodiagonalRhelph3
+    mov ch,getCol
+    cmp ch,8
+    je nodiagonalRhelph3
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph3
+    cmp currPiece,'*'
+    jne enemyDRh3
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+  
+    jmp notenemyDRh3
+    enemyDRh3:
+    ;mov ch,getcol
+    ;mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh3:
+      ;jmp notupr 
+    nodiagonalRhelph3:
+
+    notdiagonalRh3:
+
+    
+    mov cl,temprow
+    mov getrow,cl
+    mov cl,tempcol
+    mov getcol,cl
+
+    inc getrow
+    dec getCol
+    dec getCol
+
+    mov cl,getrow
+    cmp cl,8
+    je nodiagonalRhelph4
+    mov cl,getCol
+    cmp cl,-1
+    je nodiagonalRhelph4
+    mov ch,getCol
+    cmp ch,-2
+    je nodiagonalRhelph4
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph4
+    cmp currPiece,'*'
+    jne enemyDRh4
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+  
+    jmp notenemyDRh4
+    enemyDRh4:
+    ;mov ch,getcol
+    ;mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh4:
+      ;jmp notupr 
+    nodiagonalRhelph4:
+
+    notdiagonalRh4:
+
+
+
+    mov cl,temprow
+    mov getrow,cl
+    mov cl,tempcol
+    mov getcol,cl
+
+    inc getrow
+    inc getCol
+    inc getCol
+
+    mov cl,getrow
+    cmp cl,8
+    je nodiagonalRhelph5
+    mov cl,getCol
+    cmp cl,9
+    je nodiagonalRhelph5
+    mov ch,getCol
+    cmp ch,8
+    je nodiagonalRhelph5
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+    cmp currPiece,'a'
+    jg nodiagonalRhelph5
+    cmp currPiece,'*'
+    jne enemyDRh5
+    mov ch,getcol
+    mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+  
+    jmp notenemyDRh5
+    enemyDRh5:
+    ;mov ch,getcol
+    ;mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh5:
+      ;jmp notupr 
+    nodiagonalRhelph5:
+
+    notdiagonalRh5:
+
+    mov cl,temprow
+    mov getrow,cl
+
+
+
+    mov ch,tempcol
+    mov getcol,ch
+
+    dec getrow
+    dec getCol
+    dec getCol
+
+
+    mov cl,getCol
+    cmp cl,-1
+    je nodiagonalRhelph7
+
+    mov cl,getrow
+    cmp cl,-1
+    je nodiagonalRhelph7
+
+    mov ch,getCol
+    cmp ch,-2
+    je nodiagonalRhelph7
+
+
+    pusha
+      Call FAR PTR getCellData
+    popa
+
+
+    
+      cmp currPiece,'a'
+      jg nodiagonalRhelph7
+      cmp currPiece,'*'
+      jne enemyDRh7
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+    
+    jmp notenemyDRh7
+    enemyDRh7:
+    ;mov ch,getcol
+    ;mov cl,getrow
+    mov [si],cl
+    mov [di],ch
+    inc si
+    inc di
+      ; change color ya ali
+    notenemyDRh7:
+      ;jmp notupr 
+    nodiagonalRhelph7:
+
+    notdiagonalRh7:
+
+    pusha
+      mov cl,temprow
+      mov getrow,cl
+      mov ch,tempcol
+      mov getcol,ch
+    popa
+
+    add getcol,2
+    dec getrow
+
+
+    mov cl,getCol
+    cmp cl,8
+    je nodiagonalRhelph8
+    mov cl,getrow
+    cmp cl,-1
+    je nodiagonalRhelph8
+    ;? error here ch and cl 
+    mov ch,getCol
+    cmp ch,9
+    je nodiagonalRhelph8
+    pusha
+      Call FAR PTR getCellData
+    popa
+      cmp currPiece,'a'
+      ja nodiagonalRhelph8
+      cmp currPiece,'*'
+      jne enemyDRh8
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+    
+    jmp notenemyDRh8
+    enemyDRh8:
+    ;mov ch,getcol
+    ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+      ; change color ya ali
+    notenemyDRh8:
+      ;jmp notupr 
+    nodiagonalRhelph8:
+
+    notdiagonalRh8:
+
+    
+
+
+
+
+  noth:
+
+flagNoPiece:
+
+
+push ax
+  mov ah,0ch
+  mov al,0
+  int 21h
+pop ax  
+
+ret
+GetAvaliableMoves ENDP
+
+
+
+
+
+HighlighCells PROC FAR
+
+xor SI,SI
+lea SI, CurrentMovesRow
+lea di,CurrentMovesColumn
+
+
+
+LoopHighlight:
+
+mov cl,[di]
+cmp cl,"|"
+je exitHighlighCells
+
+
+mov ax,0
+mov bx,0
+
+mov bl,[si]
+mov al,[di]
+
+mov dx,0eh
+pusha
+CALL FAR PTR drawBorder
+popa
+xor ax,ax
+xor bx,bx
+inc si
+inc di 
+jmp LoopHighlight
+
+exitHighlighCells:
+
+ret
+HighlighCells ENDP
 end main
