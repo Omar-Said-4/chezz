@@ -274,6 +274,9 @@ clipBoardP2 db '*',0,0
 getrow db 1
 getcol db 4 
 
+Highlighted1bool db 0
+Highlighted2bool db 0
+
 
 temprow db 0
 tempcol db 0
@@ -294,8 +297,14 @@ Pieces      DB 'R','H','B','K','Q','B','H','R'
             DB 'p','p','p','*','*','p','p','p'
             DB 'r','h','b','k','q','b','h','r'
             
-
-
+Time        DB  0,  0,  0,  0,  0,  0,  0,  0
+            DB  0,  0,  0,  0,  0,  0,  0,  0        
+            DB  0,  0,  0,  0,  0,  0,  0,  0
+            DB  0,  0,  0,  0,  0,  0,  0,  0       
+            DB  0,  0,  0,  0,  0,  0,  0,  0
+            DB  0,  0,  0,  0,  0,  0,  0,  0
+            DB  0,  0,  0,  0,  0,  0,  0,  0
+            DB  0,  0,  0,  0,  0,  0,  0,  0
 
 CurrentMovesColumn DB 32 dup("|")
 CurrentMovesRow DB 32 dup("|")
@@ -353,7 +362,8 @@ play:
               ;  popa 
                 CALL FAR PTR HighlighCells
                 CALL FAR PTR HighlighCells2
-
+                CALl FAR PTR freeClipboard1
+                CALl FAR PTR freeClipboard2
 
 
 jmp play
@@ -1295,6 +1305,8 @@ CheckPlayerOverlap ENDP
   mov bl,currPiece
   cmp bl,"*"
   je flagNoPieceHelpr
+  cmp bl,'Z'
+  jb flagNoPieceHelpr
   jmp NotflagnoPiece
   flagNoPieceHelpr:
   jmp flagNoPiece
@@ -3554,6 +3566,8 @@ popa
 mov bl,currPiece
 cmp bl,"*"
 je flagNoPieceHelpr2
+cmp bl,'Z'
+ja flagNoPieceHelpr2
 jmp NotflagnoPiece2
 flagNoPieceHelpr2:
 jmp flagNoPiece2
@@ -5796,6 +5810,8 @@ GetAvaliableMoves2 ENDP
 
 HighlighCells PROC FAR
 
+cmp Highlighted1bool,1
+je exitHighlighCells
 xor SI,SI
 lea SI, CurrentMovesRow
 lea di,CurrentMovesColumn
@@ -5807,7 +5823,6 @@ LoopHighlight:
 mov cl,[di]
 cmp cl,"|"
 je exitHighlighCells
-
 
 mov ax,0
 mov bx,0
@@ -5828,6 +5843,7 @@ xor ax,ax
 xor bx,bx
 inc si
 inc di 
+mov Highlighted1bool,1
 jmp LoopHighlight
 
 exitHighlighCells:
@@ -5837,7 +5853,8 @@ HighlighCells ENDP
 
 
 HighlighCells2 PROC FAR
-
+cmp Highlighted2bool,1
+je exitHighlighCells2
 xor SI,SI
 lea SI, CurrentMovesRow2
 lea di,CurrentMovesColumn2
@@ -5870,12 +5887,34 @@ xor ax,ax
 xor bx,bx
 inc si
 inc di 
+mov Highlighted2bool,1
 jmp LoopHighlight2
-
 exitHighlighCells2:
 
 ret
 HighlighCells2 ENDP
+freeClipboard1 Proc far
+cmp clipBoardP1,'*'
+je notFCP1
+cmp CurrentMovesColumn,'|'
+je FCP1
+jmp notFCP1
+FCP1:
+Mov clipBoardP1,'*'
+notFCP1:
+ret
+freeClipboard1 EndP
 
+freeClipboard2 Proc far
+cmp clipBoardP2,'*'
+je notFCP2
+cmp CurrentMovesColumn2,'|'
+je FCP2
+jmp notFCP2
+FCP2:
+Mov clipBoardP2,'*'
+notFCP2:
+ret
+freeClipboard2 EndP
 
 end main
