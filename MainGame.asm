@@ -300,14 +300,14 @@ currTime DW 0
 
 
 
-Pieces      DB 'R','H','B','K','Q','B','H','R'
+Pieces      DB 'R','H','p','K','p','B','H','R'
             DB '*','P','P','P','P','P','P','P'
             DB '*','h','*','h','*','h','*','H'
             DB '*','P','B','*','*','H','*','h'
             DB 'r','*','*','p','*','r','*','*'
             DB 'p','*','*','K','*','*','*','*'
             DB 'p','p','p','*','*','p','p','p'
-            DB 'r','h','b','k','q','b','h','r'
+            DB 'r','h','b','k','P','b','h','r'
             
 Time        DW  0,  0,  0,  0,  0,  0,  0,  0
             DW  0,  0,  0,  0,  0,  0,  0,  0        
@@ -352,7 +352,12 @@ main proc FAR
                 mov  ah,0
                 mov  al,13h
                 int  10h
-
+                
+                ;mov al,2
+                ;mov getrow,al
+                ;mov ah,5
+                ;mov getcol,ah
+                Call Far Ptr getCellData
                 pusha
                 call FAR PTR ChessBoard
                 popa
@@ -378,6 +383,7 @@ play:
                 CALl FAR PTR freeClipboard1
                 CALl FAR PTR freeClipboard2
                 call far ptr releaseClipBoard1
+                Call FAR PTR FreeCell
                 CALL FAR PTR drawAllPieces
                 
                 ; pusha
@@ -556,6 +562,17 @@ drawAllPieces ENDP
 drawPlayer1 proc far
 mov al,Player1square
 mov ah,Player1square[1]
+mov getrow,al
+mov getcol,ah
+pusha
+Call Far PTR getCellData
+popa
+;pusha
+;CALl FAR PTR GetTimeFromInterrupt
+;popa
+;mov cx,SystemTime
+;cmp cx,currTime
+;jb notp1draw 
 mov drawRow,al
 mov si,0
 MOV drawCol,ah
@@ -566,6 +583,7 @@ mov bh,0
 mov  bl,drawRow
 mov dx,0ah ;color 
 CALL FAR PTR drawSingleCell
+;notp1draw:
 ret
 drawPlayer1 ENDP
 
@@ -602,9 +620,10 @@ outer_getter1:
 mov ch,8
 inner_getter1:
 push si
+inc offsetTime
+inc offsetTime
 lea si,Time
 add si,offsetTime
-inc offsetTime
 mov bx,[si]
 mov currTime,bx
 pop si
@@ -623,9 +642,10 @@ getter2:
 inc si
 inc di
 push si
+inc offsetTime
+inc offsetTime
 mov si,offset Time
 add si,offsetTime
-inc offsetTime
 mov bx,[si]
 mov currTime,bx
 pop si
@@ -675,9 +695,21 @@ mov getcol,ah
 mov si,0
 mov bh,0
 mov bl,getcol
-mov  ax,bx
+mov ax,bx
 mov bh,0
 mov  bl,getrow
+pusha
+mov ax,currTime 
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldown1
+jmp nocooldown1
+redcooldown1:
+mov currColor,04h
+nocooldown1:
+popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -712,6 +744,18 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+pusha
+mov ax,currTime 
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldown2
+jmp nocooldown2
+redcooldown2:
+mov currColor,04h
+nocooldown2:
+popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -746,6 +790,18 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+pusha
+mov ax,currTime 
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldown3
+jmp nocooldown3
+redcooldown3:
+mov currColor,04h
+nocooldown3:
+popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -784,6 +840,18 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+pusha
+mov ax,currTime 
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldown4
+jmp nocooldown4
+redcooldown4:
+mov currColor,04h
+nocooldown4:
+popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -1309,7 +1377,7 @@ CheckPlayerOverlap ENDP
   jne flagNoPieceHelp
   xor di,di
   lea di,CurrentMovesColumn
-    xor ax,ax
+  xor ax,ax
   mov ah,01h
   int 16h
   ;mov dl,ah
@@ -1337,12 +1405,14 @@ CheckPlayerOverlap ENDP
     mov cl,getcol
     mov tempcol,cl
   popa
-
   mov bl,currPiece
   cmp bl,"*"
   je flagNoPieceHelpr
   cmp bl,'Z'
   jb flagNoPieceHelpr
+  mov bp,currTime
+  cmp bp,SystemTime
+  ja flagNoPieceHelpr
   jmp NotflagnoPiece
   flagNoPieceHelpr:
   jmp flagNoPiece
@@ -1359,6 +1429,9 @@ CheckPlayerOverlap ENDP
   ;!pawn
     cmp bl,"p"
     jne notphelp
+    mov cl,temprow
+    cmp cl,0
+    je notphelp
     jmp isp
     notphelp:
     jmp notp
@@ -3621,6 +3694,9 @@ popa
 ;!pawn
   cmp bl,"P"
   jne notphelp2
+  mov cl,temprow
+  cmp cl,7
+  je notphelp2
   jmp isp2
   notphelp2:
   jmp notp2
@@ -6026,18 +6102,18 @@ releaseClipBoard1 proc far
   call far ptr GetTimeFromInterrupt
   popa
   
-  pusha
-  mov bl,getrow
-  mov bh,00h
-  mov al,getCol
-  mov ah,0
-  mov si,0
-  mov dl,0ah
-  mov dh,00h
-  CALL FAR PTR drawSingleCell
-  popa
-  mov ah,00h
-  int 16h
+ ; pusha
+ ; mov bl,getrow
+ ; mov bh,00h
+  ;mov al,getCol
+  ;dec al
+  ;dec Player1square
+ ; mov ah,0
+  ;mov si,0
+  ;mov dl,0ch
+  ;mov dh,00h
+ ; CALL FAR PTR drawSingleCell
+ ; popa
   pusha
   mov cl,getrow
   mov timerow,cl
@@ -6045,7 +6121,9 @@ releaseClipBoard1 proc far
   mov timecol,ch
   CALL FAR PTR SetCellTime
   mov cx,SystemTime
-  mov [timebrush],cx
+  add cx,3
+  mov bx,timebrush
+  mov [bx],cx
   popa
 
   
@@ -6142,18 +6220,22 @@ resetcurrentmoves1 endp
 resetcurrentmoves2 proc far
 lea si,CurrentMovesColumn2
 loopcr2:
-  cmp [si],"|"
+mov cl,[si]
+  cmp cl,"|"
   je changeRow2
-  mov [si],'|'
+  mov cl,[si]
+  mov cl,'|'
   inc si
 jmp loopcr2
 
 changeRow2:
 lea si,CurrentMovesRow2
 looprr2:
-  cmp [si],"|"
+mov cl,[si]
+  cmp cl,"|"
   je exitReset2
-  mov [si],'|'
+  mov cl,'|'
+  mov [si],cl
   inc si
 jmp looprr2
 
@@ -6226,18 +6308,19 @@ ret
 ClearHighlighted1 ENDP
 
 GetTimeFromInterrupt Proc Far
-mov ah,2Ch
-int 21h
-mov SystemTime,0
-xor ax,ax
-mov al,cl
-mov cl,60
-mul cl
-mov dl,0
-add ax,dx
-mov SystemTime,ax
-ret
-GetTimeFromInterrupt ENDP
+  mov ah,2Ch
+  int 21h
+  mov SystemTime,0
+  xor ax,ax
+  mov al,cl
+  mov cl,60
+  mul cl
+  mov cl,8
+  shr dx,cl
+  add ax,dx
+  add SystemTime,ax
+  ret
+  GetTimeFromInterrupt ENDP
 SetCellTime Proc far
   lea si,Time
   mov timebrush,si
@@ -6247,6 +6330,7 @@ SetCellTime Proc far
   loopbrushot:
   mov ch,8
   loopbrushit:
+  inc timebrush
   inc timebrush
   dec ch
   jnz loopbrushit
@@ -6258,10 +6342,55 @@ SetCellTime Proc far
   je exitbrusht
   loopbrushct:
   inc timebrush
+  inc timebrush
   dec cl
   jnz loopbrushct
   exitbrusht: 
   ret 
   SetCellTime ENDP
-
+  FreeCell PROC FAR
+  CALl FAR PTR GetTimeFromInterrupt
+  mov cl,0 ;row
+  freeo:
+  mov ch,0 ;col
+  freei:
+  pusha
+  mov getcol,ch
+  mov getrow,cl
+  call FAR PTR getCellData
+  popa
+  mov ax,currTime
+  cmp ax,0
+  je notfreecell1
+  cmp ax,SystemTime
+  jb freecell1
+  jmp notfreecell1
+  freecell1:
+  mov timerow,cl
+  mov timecol,ch
+  pusha
+  CAll FAR PTR SetCellTime
+  popa
+  mov bx,timebrush
+  mov si,0000h
+  mov [bx],si
+  pusha
+  mov dl,currColor
+  mov dh,00h
+  mov bl,timerow
+  mov bh,00h
+  mov al,timecol
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+  popa
+  notfreecell1:
+  inc ch
+  cmp ch,8
+  jne freei
+  inc cl
+  cmp cl,8
+  jne freeo
+  ret 
+  FreeCell ENDP
 end main
