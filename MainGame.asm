@@ -18,6 +18,10 @@ timecol db 0
 timerow db 0
 timebrush dw 0
 
+
+
+
+
 SystemTime Dw 0
 
 brushRow DB 0
@@ -383,6 +387,7 @@ play:
                 CALl FAR PTR freeClipboard1
                 CALl FAR PTR freeClipboard2
                 call far ptr releaseClipBoard1
+                call far ptr releaseClipBoard2
                 Call FAR PTR FreeCell
                 CALL FAR PTR drawAllPieces
                 
@@ -698,8 +703,11 @@ mov bl,getcol
 mov ax,bx
 mov bh,0
 mov  bl,getrow
+
 pusha
 mov ax,currTime 
+
+
 pusha
 CALl FAR PTR GetTimeFromInterrupt
 popa
@@ -709,7 +717,11 @@ jmp nocooldown1
 redcooldown1:
 mov currColor,04h
 nocooldown1:
+
 popa
+
+
+
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -889,6 +901,12 @@ CheckP2Moves proc far
 
 mov ah,01h
 int 16h
+
+jnz clr2
+jmp notclr2
+clr2:
+mov Clearbool,1
+notclr2:
 ;mov dl,ah
 ;mov ah,07         ;Read one char and put in al
 ;int 21h  
@@ -918,6 +936,29 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+
+
+
+pusha
+mov ax,currTime 
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldownw
+jmp nocooldownw
+redcooldownw:
+mov currColor,04h
+nocooldownw:
+popa
+
+
+
+
+
+
+
+
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -953,6 +994,23 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+
+pusha
+mov ax,currTime 
+
+
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldowns
+jmp nocooldowns
+redcooldowns:
+mov currColor,04h
+nocooldowns:
+popa
+
+
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -987,6 +1045,24 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+
+pusha
+mov ax,currTime 
+
+
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldowna
+jmp nocooldowna
+redcooldowna:
+mov currColor,04h
+nocooldowna:
+
+popa
+
+
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -1025,6 +1101,23 @@ mov bl,getcol
 mov  ax,bx
 mov bh,0
 mov  bl,getrow
+
+pusha
+mov ax,currTime 
+
+
+pusha
+CALl FAR PTR GetTimeFromInterrupt
+popa
+cmp ax,SystemTime
+ja redcooldownd
+jmp nocooldownd
+redcooldownd:
+mov currColor,04h
+nocooldownd:
+
+popa
+
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
@@ -1405,6 +1498,7 @@ CheckPlayerOverlap ENDP
     mov cl,getcol
     mov tempcol,cl
   popa
+
   mov bl,currPiece
   cmp bl,"*"
   je flagNoPieceHelpr
@@ -1438,7 +1532,7 @@ CheckPlayerOverlap ENDP
     isp:
     dec getrow
     pusha
-    CAll far ptr getCellData
+      CAll far ptr getCellData
     popa
     cmp currPiece,"*"
     jne notEmpty1
@@ -1458,6 +1552,9 @@ CheckPlayerOverlap ENDP
     pop si
     notEmpty1:
     dec getcol
+    ; overflow
+    cmp getcol,-1
+    je alliep1
     pusha
     CAll far ptr getCellData
     popa
@@ -1481,6 +1578,10 @@ CheckPlayerOverlap ENDP
     alliep1:
     inc getcol
     inc getcol
+    ; overflow
+    cmp getcol,8
+    je notp
+
     pusha
     CAll far ptr getCellData
     popa
@@ -3678,6 +3779,9 @@ cmp bl,"*"
 je flagNoPieceHelpr2
 cmp bl,'Z'
 ja flagNoPieceHelpr2
+mov bp,currTime
+cmp bp,SystemTime
+ja flagNoPieceHelpr2
 jmp NotflagnoPiece2
 flagNoPieceHelpr2:
 jmp flagNoPiece2
@@ -3723,12 +3827,14 @@ popa
   pop si
   notEmpty12:
   dec getcol
+  cmp getcol,-1
+  je alliep12
   pusha
   CAll far ptr getCellData
   popa
   cmp currPiece,"*"
   je alliep12
-  cmp currPiece,"A"
+  cmp currPiece,"Z"
   JB alliep12
   mov ch,getcol
   mov cl,getrow
@@ -3746,12 +3852,16 @@ popa
   alliep12:
   inc getcol
   inc getcol
+  ; handling overflow
+  cmp getcol,8
+  je notp2
+  
   pusha
   CAll far ptr getCellData
   popa
   cmp currPiece,"*"
   je alliep22
-  cmp currPiece,"A"
+  cmp currPiece,"Z"
   JB alliep22
   mov ch,getcol
   mov cl,getrow
@@ -5892,18 +6002,6 @@ GetAvaliableMoves2 ENDP
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 HighlighCells PROC FAR
 
 ;cmp Highlighted1bool,1
@@ -6014,6 +6112,9 @@ freeClipboard2 Proc far
   notFCP2:
   ret
   freeClipboard2 EndP
+
+
+
 
 
 
@@ -6176,6 +6277,183 @@ releaseClipBoard1 proc far
   Call Far ptr resetcurrentmoves1
 
   exitRelease1:
+    ; push ax
+    ;   cmp Clearbool,1
+    ;   je clrf2
+    ;   jmp notclrf2
+    ;   clrf2:
+    ;   mov ah,0ch
+    ;   mov al,0
+    ;   int 21h
+    ;   mov Clearbool,0
+    ;   notclrf2: 
+    ; pop ax  
+
+  ret
+  releaseClipBoard1 ENDP
+
+
+
+
+
+releaseClipBoard2 proc far
+
+
+  ;* check the input of the user if enter 
+  ;* contiue for the checking phase
+  ;* checking phase:
+  ;* get the p1 current row and col and check if this move is valid 
+  ;* if it is not valid remove the highlighting 
+
+  cmp clipBoardP2 ,"*"
+  je exitRelease1help2
+  jmp notexitrelease2
+  exitRelease1help2:
+  jmp exitRelease12
+  notexitrelease2:
+
+  mov cl,Player2square
+  mov ch,Player2square[1]
+
+  cmp cl,clipBoardP2[1]
+  je compare2ndr2
+
+  jmp normalRealase2 
+  compare2ndr2:
+  cmp ch, clipBoardP2[2]
+  je exitRelease1helpp22
+  
+  jmp notexitRelease1helpp22
+  exitRelease1helpp22:
+  jmp exitRelease12
+  notexitRelease1helpp22:
+
+
+  normalRealase2:
+  mov ah,01h
+  int 16h
+  cmp ah,16
+  jne exitRelease1help112
+  jmp notexitrelease112
+  exitRelease1help112:
+  jmp exitRelease12
+  notexitrelease112:
+
+
+
+  mov cl,Player2square
+  mov getrow,cl
+  mov cl,Player2square[1]
+  mov getCol,cl
+
+  
+
+  lea di,CurrentMovesRow2
+  lea si,CurrentMovesColumn2
+  mov cl,getrow
+  mov ch,getcol
+  rc12:
+  cmp cl,[di]
+  je cmpr22
+  jmp notcmpr22
+  
+  cmpr22:
+  cmp ch,[si]
+  je mov12
+  notcmpr22:
+  inc si
+  inc di
+  mov al,[si]
+  cmp al,'|'
+  je exitandreset1help2
+  mov al,[di]
+  cmp al,'|'
+  je exitandreset1help2
+  jmp rc12
+  jmp notexitandreset12
+  exitandreset1help2:
+  jmp exitandreset12
+  notexitandreset12:
+  mov12:
+
+  pusha
+  call far ptr GetTimeFromInterrupt
+  popa
+  
+ ; pusha
+ ; mov bl,getrow
+ ; mov bh,00h
+  ;mov al,getCol
+  ;dec al
+  ;dec Player1square
+ ; mov ah,0
+  ;mov si,0
+  ;mov dl,0ch
+  ;mov dh,00h
+ ; CALL FAR PTR drawSingleCell
+ ; popa
+  pusha
+  mov cl,getrow
+  mov timerow,cl
+  mov ch,getcol
+  mov timecol,ch
+  CALL FAR PTR SetCellTime
+  mov cx,SystemTime
+  add cx,3
+  mov bx,timebrush
+  mov [bx],cx
+  popa
+
+  
+  mov cl,getrow
+  mov brushRow,cl
+
+  mov ch,getCol
+  mov brushCol,ch
+
+  pusha
+  call far ptr SetBrush
+  popa
+  mov bx,brush
+  mov cl,clipBoardP2
+  mov[bx],cl
+  
+  mov cl,clipBoardP2[1]
+  mov brushRow,cl
+  mov getrow,cl
+  mov cl,clipBoardP2[2]
+  mov brushCol,cl
+  mov getcol,cl
+  call far ptr SetBrush
+  
+  pusha
+  CALL FAR PTR getCellData
+  popa 
+
+  pusha
+   
+   mov dl,currColor
+   mov dh,00h
+   mov bl,getrow
+   mov bh,00h
+   mov al,getCol
+   mov ah,0
+   mov si,0
+   CALL FAR PTR drawSingleCell
+  popa 
+  mov bx,brush
+  mov cl,'*'
+  mov [bx],cl
+
+
+
+  exitandreset12:
+  pusha
+  CALL FAR PTR ClearHighlighted2
+  popa
+  Call Far ptr resetcurrentmoves2
+
+  exitRelease12:
     push ax
       cmp Clearbool,1
       je clrf2
@@ -6189,7 +6467,9 @@ releaseClipBoard1 proc far
     pop ax  
 
   ret
-  releaseClipBoard1 ENDP
+  releaseClipBoard2 ENDP
+
+
 
 
 ;? true
@@ -6218,32 +6498,30 @@ resetcurrentmoves1 endp
 
 
 resetcurrentmoves2 proc far
+xor si,si
 lea si,CurrentMovesColumn2
-loopcr2:
-mov cl,[si]
-  cmp cl,"|"
-  je changeRow2
-  mov cl,[si]
-  mov cl,'|'
-  inc si
-jmp loopcr2
+lea di,CurrentMovesRow2
+mov cl,delmoves
+mov al,31
 
-changeRow2:
-lea si,CurrentMovesRow2
-looprr2:
-mov cl,[si]
-  cmp cl,"|"
-  je exitReset2
-  mov cl,'|'
-  mov [si],cl
-  inc si
-jmp looprr2
+
+deleting2: 
+mov [si],cl
+mov [di],cl
+inc si
+inc di
+dec al
+jnz deleting2
 
 
 exitReset2:
 mov clipBoardP2,'*'
 ret
+
 resetcurrentmoves2 endp
+
+
+
 ;? true
 SetBrush Proc far
   lea si,Pieces
@@ -6270,6 +6548,9 @@ SetBrush Proc far
   exitbrush: 
   ret 
   SetBrush ENDP
+
+
+
 
 ClearHighlighted1 PROC far
 lea si,CurrentMovesColumn
@@ -6307,20 +6588,76 @@ mov al,[si]
 ret
 ClearHighlighted1 ENDP
 
+
+ClearHighlighted2 PROC far
+lea si,CurrentMovesColumn2
+lea di,CurrentMovesRow2
+
+loopclearhighlight2:
+mov cl,[si]
+mov ch,[di]
+mov getcol,cl
+mov getrow,ch
+pusha
+CALL FAR PTR getCellData
+popa
+pusha
+mov dl,currColor 
+mov dh,0
+mov bl,getrow
+mov bh,0
+mov al,getcol
+mov ah,0
+mov si,0
+CALL FAR PTR drawSingleCell
+popa
+inc si
+inc di
+mov al,[si]
+  cmp al,'|'
+  je clearhighlight2
+  mov al,[di]
+  cmp al,'|'
+  je clearhighlight2
+  jmp loopclearhighlight2
+  clearhighlight2:
+  Call Far PTR drawPlayer2
+ret
+ClearHighlighted2 ENDP
+
+
 GetTimeFromInterrupt Proc Far
   mov ah,2Ch
   int 21h
+
   mov SystemTime,0
+  cmp cl,0
+  je cornerCase
+  jne CalculateNormal
+
+
+  cornerCase:
+  mov ax,3600
+  jmp addSecondsOnly
+
+  CalculateNormal:
   xor ax,ax
   mov al,cl
   mov cl,60
   mul cl
+
+  addSecondsOnly:
   mov cl,8
+
+  
   shr dx,cl
   add ax,dx
   add SystemTime,ax
   ret
   GetTimeFromInterrupt ENDP
+
+
+
 SetCellTime Proc far
   lea si,Time
   mov timebrush,si
@@ -6348,6 +6685,7 @@ SetCellTime Proc far
   exitbrusht: 
   ret 
   SetCellTime ENDP
+
   FreeCell PROC FAR
   CALl FAR PTR GetTimeFromInterrupt
   mov cl,0 ;row
