@@ -18,8 +18,11 @@ timecol db 0
 timerow db 0
 timebrush dw 0
 
+GraveP1 DB '*'
+GraveP2 DB '*'
 
-
+Player1WinsBool db 0
+Player2WinsBool db 0
 
 
 SystemTime Dw 0
@@ -318,7 +321,7 @@ Pieces      DB 'R','H','p','K','p','B','H','R'
             DB 'r','*','*','p','*','r','*','*'
             DB 'p','*','*','K','*','*','*','*'
             DB 'p','p','p','*','*','p','p','p'
-            DB 'r','h','b','k','P','b','h','r'
+            DB 'r','h','b','k','q','b','h','r'
             
 Time        DW  0,  0,  0,  0,  0,  0,  0,  0
             DW  0,  0,  0,  0,  0,  0,  0,  0        
@@ -397,11 +400,20 @@ play:
                 call far ptr releaseClipBoard2
                 Call FAR PTR FreeCell
                 CALL FAR PTR drawAllPieces
+                CALL FAR PTR CheckGameOver
+                ; just to check to be removed
+               mov cl,Player2WinsBool
+               add Player1WinsBool,cl
+                cmp Player1WinsBool,1
+                jb  play
+                mov  ah,0
+                mov  al,13h
+                int  10h
                 
                 ; pusha
                 ;popa 
 
-jmp play
+;jmp play
 hlt
 
 main endp
@@ -6244,6 +6256,12 @@ releaseClipBoard1 proc far
   pusha
   call far ptr SetBrush
   popa
+
+  pusha
+  CALL FAR PTR getCellData
+  mov cl,currPiece
+  mov GraveP2,cl
+  popa
   mov bx,brush
   mov cl,clipBoardP1
   mov[bx],cl
@@ -6420,6 +6438,11 @@ releaseClipBoard2 proc far
 
   pusha
   call far ptr SetBrush
+  popa
+   pusha
+  CALL FAR PTR getCellData
+  mov cl,currPiece
+  mov GraveP1,cl
   popa
   mov bx,brush
   mov cl,clipBoardP2
@@ -6750,4 +6773,25 @@ SetCellTime Proc far
   jne freeo
   ret 
   FreeCell ENDP
+
+  CheckGameOver Proc FAR
+  ; checks if the last player killed is a king the game is over
+  cmp GraveP2,'*'
+  je p1gravecheck
+  cmp GraveP2,'K'
+  je p1wins
+  p1gravecheck:
+  cmp GraveP1,'*'
+  je notgameover
+  cmp GraveP1,'k'
+  je p2wins
+  jmp notgameover
+  p1wins:
+  mov Player1WinsBool,1
+  jmp notgameover
+  p2wins:
+  mov Player2WinsBool,1
+  notgameover:
+  ret
+  CheckGameOver ENDP
 end main
