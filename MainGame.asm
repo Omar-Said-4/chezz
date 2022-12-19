@@ -8,12 +8,20 @@
 .STACK 64
 .DATA
 MULBYC DW 0
+
+P1Status Db 20,33
+
+P2Status Db 20,3
+
+
+OverlapBool DB 0
+
 drawbool db 0
 curr_draw dw 0
 SecondCellColor dw 0 
 CoolDownColor  db 0ch
 MULBYR DW 0
-
+drawOnePieceVar DB '*'
 timecol db 0
 timerow db 0
 timebrush dw 0
@@ -367,6 +375,7 @@ main proc FAR
                 mov  al,13h
                 int  10h
                 
+                CAll FAR PTR InitialiseStatusBar
                 ;mov al,2
                 ;mov getrow,al
                 ;mov ah,5
@@ -382,10 +391,11 @@ main proc FAR
                 pusha 
                 CALL FAR PTR drawAllPieces
                 popa
+
+hlt
 play:
                 CALL FAR PTR CheckP1Moves
                 CALL FAR PTR CheckP2Moves
-                CALL FAR PTR drawAllPieces
                 CALL FAR PTR CheckPlayerOverlap
               ; pusha
 
@@ -399,16 +409,14 @@ play:
                 call far ptr releaseClipBoard1
                 call far ptr releaseClipBoard2
                 Call FAR PTR FreeCell
-                CALL FAR PTR drawAllPieces
                 CALL FAR PTR CheckGameOver
+                CALL FAR PTR UpdateStatusBar
                 ; just to check to be removed
                mov cl,Player2WinsBool
                add Player1WinsBool,cl
                 cmp Player1WinsBool,1
                 jb  play
-                mov  ah,0
-                mov  al,13h
-                int  10h
+                 hlt
                 
                 ; pusha
                 ;popa 
@@ -607,6 +615,18 @@ mov bh,0
 mov  bl,drawRow
 mov dx,0ah ;color 
 CALL FAR PTR drawSingleCell
+pusha
+mov al,Player1square
+mov ah,Player1square[1]
+mov getrow,al
+mov getCol,ah
+MOV drawRow,al
+mov drawCol,ah
+Call Far PTR getCellData
+mov al,currPiece
+mov drawOnePieceVar,al
+Call Far PTR DrawOnePiece
+popa
 ;notp1draw:
 ret
 drawPlayer1 ENDP
@@ -626,6 +646,18 @@ mov bh,0
 mov  bl,drawRow
 mov dx,0bh
 CALL FAR PTR drawSingleCell
+pusha
+mov al,Player2square
+mov ah,Player2square[1]
+mov getrow,al
+mov getCol,ah
+MOV drawRow,al
+mov drawCol,ah
+Call Far PTR getCellData
+mov al,currPiece
+mov drawOnePieceVar,al
+Call Far PTR DrawOnePiece
+popa
 ret
 drawPlayer2 ENDP
 
@@ -693,12 +725,15 @@ jmp notclr1
 clr1:
 mov Clearbool,1
 notclr1:
-;mov dl,ah
-;mov ah,07         ;Read one char and put in al
-;int 21h  
-cmp ah,48h
-jnz not_up
 
+
+
+cmp ah,48h
+jnz not_up_help
+jmp yesup
+not_up_help:
+jmp not_up
+yesup:
 ; delete what is inside the buffer without reading
 ;push ax
  ; mov ah,0ch
@@ -707,10 +742,14 @@ jnz not_up
 ;pop ax   
 
 ; draw in its place
+
+
+
 mov al,Player1square
 mov ah,Player1square[1]
 mov getrow,al
 mov getcol,ah
+
 Call Far PTR getCellData
 mov al,Player1square
 mov ah,Player1square[1]
@@ -745,6 +784,8 @@ mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
 
+
+
 cmp Player1square,0
 je not_normal_up
 dec Player1square
@@ -753,11 +794,16 @@ not_normal_up:
 mov Player1square,7
 normal_up:
 CALL FAR PTR drawPlayer1
+
+
 jmp moved
 not_up:
 cmp ah,50h
-jnz not_down
-
+jnz not_down_help
+jmp yesdown
+not_down_help:
+jmp not_down
+yesdown:
 ;push ax
 ;mov ah,0ch
 ;mov al,0
@@ -790,6 +836,9 @@ popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
+
+
+
 cmp Player1square,7
 je not_normal_down
 inc Player1square
@@ -798,12 +847,18 @@ not_normal_down:
 mov Player1square,0
 normal_down:
 CALL FAR PTR drawPlayer1
+
+
+
 jmp moved
 not_down:
 
 cmp ah,4Bh
-jnz not_left
-
+jnz not_left_help
+jmp yesleft
+not_left_help:
+jmp not_left
+yesleft:
 ;push ax
  ; mov ah,0ch
   ;mov al,0
@@ -836,6 +891,10 @@ popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
+
+
+
+
 mov cl,Player1square[1]
 cmp cl,0
 je not_normal_left
@@ -847,12 +906,19 @@ mov cl,7
 mov Player1square[1],cl
 normal_left:
 CALL FAR PTR drawPlayer1
+
+
+
+
 jmp moved
 not_left:
 
 cmp ah,4Dh
-jnz not_right
-
+jnz not_right_help
+jmp yesright
+not_right_help:
+jmp not_right
+yesright:
 ;flushing buffer
 ;push ax
 ;mov ah,0ch
@@ -886,6 +952,9 @@ popa
 mov dl,currColor
 mov dh,0
 CALL FAR PTR drawSingleCell
+
+
+
 mov cl,Player1square[1]
 cmp cl,7
 je not_normal_right
@@ -897,6 +966,9 @@ mov cl,0
 mov Player1square[1],cl
 normal_right:
 CALL FAR PTR drawPlayer1
+
+
+
 jmp moved
 not_right:
 
@@ -1171,8 +1243,11 @@ CheckP2Moves ENDP
 
 
 drawSingleCell proc FAR
-
-
+                    ; For Drawing Piece
+                    mov getrow,bl
+                    mov getCol,al
+                    MOV drawRow,bl
+                    mov drawCol,al
 
 
                   ; mov  ah,0
@@ -1248,6 +1323,14 @@ drawSingleCell proc FAR
      ;repeat till the height become 0
                     cmp  bx,0
                     jne  looping1
+
+                     pusha
+                    
+                    Call Far PTR getCellData
+                   mov al,currPiece
+                    mov drawOnePieceVar,al
+                    Call Far PTR DrawOnePiece
+                     popa
                     ret
 drawSingleCell endp
 
@@ -1455,6 +1538,8 @@ jnz no_player_overlap
 mov al,Player1square[1]
 cmp al,Player2square[1]
 jnz no_player_overlap
+cmp OverlapBool,1
+je doneoverlap 
 mov si,0
 mov bh,0
 mov bl,Player1square[1]
@@ -1466,8 +1551,10 @@ mov dx,0ah ;color
 mov drawbool,1
 mov CoolDownColor,0bh
 CALL FAR PTR drawSingleCell
+mov OverlapBool,1
 jmp doneoverlap
 no_player_overlap:
+mov OverlapBool,0
 cmp drawbool,1
 jnz doneoverlap
 CALL FAR PTR drawPlayer1
@@ -6262,6 +6349,7 @@ releaseClipBoard1 proc far
   mov cl,currPiece
   mov GraveP2,cl
   popa
+
   mov bx,brush
   mov cl,clipBoardP1
   mov[bx],cl
@@ -6292,7 +6380,16 @@ releaseClipBoard1 proc far
   mov bx,brush
   mov cl,'*'
   mov [bx],cl
-
+    pusha
+  mov dl,currColor
+  mov dh,00h
+  mov bl,brushRow
+  mov bh,00h
+  mov al,brushCol
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+  popa   
 
 
   exitandreset1:
@@ -6474,7 +6571,16 @@ releaseClipBoard2 proc far
   mov bx,brush
   mov cl,'*'
   mov [bx],cl
-
+  pusha
+  mov dl,currColor
+  mov dh,00h
+  mov bl,brushRow
+  mov bh,00h
+  mov al,brushCol
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+  popa   
 
 
   exitandreset12:
@@ -6764,13 +6870,33 @@ SetCellTime Proc far
   mov si,0
   CALL FAR PTR drawSingleCell
   popa
+  pusha
+  mov al,cl
+  mov ah,ch
+  mov getrow,al
+  mov getCol,ah
+  MOV drawRow,al
+  mov drawCol,ah
+  Call Far PTR getCellData
+  mov al,currPiece
+  mov drawOnePieceVar,al
+  Call Far PTR DrawOnePiece
+  popa
   notfreecell1:
   inc ch
   cmp ch,8
-  jne freei
+  jne freeihelp
+  jmp notfreei
+  freeihelp:
+  jmp freei
+  notfreei:
   inc cl
   cmp cl,8
-  jne freeo
+  jne freeohelp
+  jmp notfreeo
+  freeohelp:
+  jmp freeo
+  notfreeo:
   ret 
   FreeCell ENDP
 
@@ -6782,16 +6908,399 @@ SetCellTime Proc far
   je p1wins
   p1gravecheck:
   cmp GraveP1,'*'
-  je notgameover
+  je notgameoverhelp
+  jmp yesgameover
+  notgameoverhelp:
+  jmp notgameover
+  yesgameover:
   cmp GraveP1,'k'
   je p2wins
   jmp notgameover
   p1wins:
   mov Player1WinsBool,1
+  CALL FAR PTR InitialiseStatusBar
+  mov  dl, 33   ;Column
+  mov  dh, 20   ;Row
+  mov  bh, 0    ;Display page
+  mov  ah, 02h  ;SetCursorPosition
+  int  10h
+
+
+mov  al, 'W'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'I'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'N'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+  mov  dl, 3   ;Column
+  mov  dh, 20   ;Row
+  mov  bh, 0    ;Display page
+  mov  ah, 02h  ;SetCursorPosition
+  int  10h
+
+
+mov  al, 'L'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'O'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 03h  
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 03h  
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 03h  
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
   jmp notgameover
   p2wins:
   mov Player2WinsBool,1
+
+  CALL FAR PTR InitialiseStatusBar
+  mov  dl, 33   ;Column
+  mov  dh, 20   ;Row
+  mov  bh, 0    ;Display page
+  mov  ah, 02h  ;SetCursorPosition
+  int  10h
+
+
+mov  al, 'L'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'O'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+  mov  dl, 3   ;Column
+  mov  dh, 20   ;Row
+  mov  bh, 0    ;Display page
+  mov  ah, 02h  ;SetCursorPosition
+  int  10h
+
+
+mov  al, 'W'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'I'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'N'
+mov  bl, 03h  
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'S'
+mov  bl, 03h  
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+
   notgameover:
   ret
   CheckGameOver ENDP
+  DrawOnePiece PROC FAR
+mov al,drawOnePieceVar
+cmp al , 'R'
+jnz not_white_rook1
+mov curr_draw,offset WROOK
+CALL FAR PTR DrawPiece
+not_white_rook1:
+cmp al , 'r'
+jnz not_black_rook1
+mov curr_draw,offset BROOK
+CALL FAR PTR DrawPiece
+not_black_rook1:
+cmp al , 'h'
+jnz not_black_knight1
+mov curr_draw,offset BKNIGHT
+CALL FAR PTR DrawPiece
+not_black_knight1:
+cmp al , 'H'
+jnz not_white_knight1
+mov curr_draw,offset WKNIGHT
+CALL FAR PTR DrawPiece
+not_white_knight1:
+cmp al , 'p'
+jnz not_black_pawn1
+mov curr_draw,offset BPAWN
+CALL FAR PTR DrawPiece
+not_black_pawn1:
+cmp al , 'P'
+jnz not_white_pawn1
+mov curr_draw,offset WPAWN
+CALL FAR PTR DrawPiece
+not_white_pawn1:
+cmp al , 'k'
+jnz not_black_king1
+mov curr_draw,offset BKING
+CALL FAR PTR DrawPiece
+not_black_king1:
+cmp al , 'K'
+jnz not_white_king1
+mov curr_draw,offset WKING
+CALL FAR PTR DrawPiece
+not_white_king1:
+cmp al , 'q'
+jnz not_black_queen1
+mov curr_draw,offset BQUEEN
+CALL FAR PTR DrawPiece
+not_black_queen1:
+cmp al , 'Q'
+jnz not_white_queen1
+mov curr_draw,offset WQUEEN
+CALL FAR PTR DrawPiece
+not_white_queen1:
+cmp al , 'b'
+jnz not_black_bishop1
+mov curr_draw,offset BBISHOP
+CALL FAR PTR DrawPiece
+not_black_bishop1:
+cmp al , 'B'
+jnz not_white_bishop1
+mov curr_draw,offset WBISHOP
+CALL FAR PTR DrawPiece
+not_white_bishop1:
+ret
+DrawOnePiece ENDP
+InitialiseStatusBar PROC FAR
+  mov dl,0fh
+  mov dh,00h
+  mov bl,8
+  mov bh,00h
+  mov al,6
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,9
+  mov bh,00h
+  mov al,6
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,8
+  mov bh,00h
+  mov al,7
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,9
+  mov bh,00h
+  mov al,7
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,8
+  mov bh,00h
+  mov al,0
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,9
+  mov bh,00h
+  mov al,0
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,8
+  mov bh,00h
+  mov al,1
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+  mov dl,0fh
+  mov dh,00h
+  mov bl,9
+  mov bh,00h
+  mov al,1
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
+
+
+
+mov  dl, 30   ;Column
+mov  dh, 20   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'P'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, '1'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ':'
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  dl, 0   ;Column
+mov  dh, 20   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+mov  al, 'P'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, '2'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ':'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+ ret
+InitialiseStatusBar ENDP
+
+UpdateStatusBar PROC FAR
+
+cmp GraveP1,'*'
+je upP2
+cmp GraveP1,'k'
+je upP2
+mov  dl, P1Status[1]   ;Column
+mov  dh, P1Status   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+
+mov  al, GraveP1
+mov  bl, 0ah  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov GraveP1,'*'
+inc P1Status[1]
+cmp P1Status[1],40
+jne upP2
+mov P1Status[1],30
+inc P1Status
+upP2:
+cmp GraveP2,'*'
+je noupdates
+cmp GraveP2,'K'
+je noupdates
+mov  dl, P2Status[1]   ;Column
+mov  dh, P2Status   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+
+mov  al, GraveP2
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov GraveP2,'*'
+inc P2Status[1]
+cmp P2Status[1],10
+jne noupdates
+mov P2Status[1],0
+inc P2Status
+noupdates:
+ret
+UpdateStatusBar ENDP
 end main
