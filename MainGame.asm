@@ -9,6 +9,8 @@
 .DATA
 MULBYC DW 0
 
+checkmate1bool db 0
+checkmate2bool db 0
 P1Status Db 20,33
 
 P2Status Db 20,3
@@ -282,7 +284,23 @@ WBISHOP DB '*', '*', '*', '*', '*','*', '*', '*', '*', '*', '*', '*', '*', 0fh, 
 
 
 
+msg1 db "To Start Game Press F2 $"
+msg2 db "To End The Program Press ESC $"
+
+
+
+
 ; Color Matrix
+
+OldPieces   DB 'R','H','B','K','Q','B','H','R'
+            DB 'P','P','P','P','P','P','P','P'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB 'p','p','p','p','p','p','p','p'
+            DB 'r','h','b','k','q','b','h','r'
+
 
 
 
@@ -321,15 +339,37 @@ Clearbool db 0
 currTime DW 0
 
 
+f4bool db 0
 
-Pieces      DB 'R','H','p','K','p','B','H','R'
-            DB '*','P','P','P','P','P','P','P'
-            DB '*','h','*','h','*','h','*','H'
-            DB '*','P','B','*','*','H','*','h'
-            DB 'r','*','*','p','*','r','*','*'
-            DB 'p','*','*','K','*','*','*','*'
-            DB 'p','p','p','*','*','p','p','p'
-            DB 'r','h','b','k','q','b','h','r'
+
+playtime dw 0
+
+
+Secs db 0
+Mins db 0
+dispsecs db 0,0
+
+
+
+
+
+
+
+Pieces      DB 'R','H','B','K','Q','B','H','R'
+            DB 'P','P','P','P','P','P','P','P'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
+            DB 'p','p','p','p','p','*','p','p'
+            DB 'r','h','b','k','q','p','R','*'
+
+
+q2 db 0,3
+
+q1 db 7,3
+
+
             
 Time        DW  0,  0,  0,  0,  0,  0,  0,  0
             DW  0,  0,  0,  0,  0,  0,  0,  0        
@@ -369,6 +409,70 @@ Player2square db 1,4
 main proc FAR
                 MOV AX,@DATA
                 mov ds, ax
+
+
+              MainScreen:
+             
+
+              ; changing to text mode
+              mov ah,3
+              mov al,13h
+              int 10h
+
+              ; clearing the screen
+              mov ah,0
+              mov al,3
+              int 10h
+
+              
+
+              
+           
+              ; setting the cursor postion
+
+
+              mov ah,2  
+              mov dl,25
+              mov dh,8
+              int 10h
+
+        
+
+              mov ah, 9
+              mov dx, offset msg1
+              int 21h
+
+              mov ah,2  
+              mov dl,25
+              mov dh,10
+              int 10h
+
+
+
+              mov ah, 9
+              mov dx, offset msg2
+              int 21h
+
+              
+              getkey:
+              mov ah,0
+              int 16h
+        
+              cmp ah,1
+              je terminatehelp
+              jmp notterminate
+              terminatehelp:
+              jmp terminate
+              notterminate:
+
+              cmp ah,60
+              jne getkey
+
+              ;jmp MainScreen
+
+
+
+
                 mov  ax,0A000h
                 mov  es,ax
                 mov  ah,0
@@ -380,20 +484,22 @@ main proc FAR
                 ;mov getrow,al
                 ;mov ah,5
                 ;mov getcol,ah
+                pusha
+                CALL FAR PTR InitialisePieces
+                popa
                 Call Far Ptr getCellData
                 pusha
                 call FAR PTR ChessBoard
                 popa
 
-                  Call Far PTR drawPlayer1
-                  Call Far PTR drawPlayer2
+                Call Far PTR drawPlayer1
+                Call Far PTR drawPlayer2
                   
-                pusha 
-                CALL FAR PTR drawAllPieces
-                popa
 
 hlt
 play:
+                cmp f4bool , 1
+                je rg
                 CALL FAR PTR CheckP1Moves
                 CALL FAR PTR CheckP2Moves
                 CALL FAR PTR CheckPlayerOverlap
@@ -412,17 +518,34 @@ play:
                 CALL FAR PTR CheckGameOver
                 CALL FAR PTR UpdateStatusBar
                 ; just to check to be removed
-               mov cl,Player2WinsBool
-               add Player1WinsBool,cl
+                CALL FAR PTR displaytime
+              
+                mov cl,Player2WinsBool
+                add Player1WinsBool,cl
                 cmp Player1WinsBool,1
                 jb  play
-                 hlt
+                ; delay after  one player wins
+                MOV     CX, 12H
+                MOV     DX, 0FFFFH
+                MOV     AH, 86H
+                INT     15H
+                rg:
+
+                pusha
+                  CALL FAR PTR RESETGAME
+                popa
+                jmp MainScreen
                 
                 ; pusha
                 ;popa 
 
 ;jmp play
-hlt
+                terminate:
+                  mov ah,0
+                  mov al,3
+                  int 10h
+                  mov ah,4ch
+                  int 21h
 
 main endp
 
@@ -481,114 +604,6 @@ popa
 ret
 ChessBoard ENDP
 
-drawAllPieces proc FAR
-
-mov cl,8
-
-MOV drawRow,0
-mov si,offset Pieces
-
-outer_pieces_draw:
-
-mov ch,8
-mov drawCol,0
-
-inner_pieces_draw:
-push cx
-push si
-mov al,[si]
-cmp al , 'R'
-jnz not_white_rook
-mov curr_draw,offset WROOK
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_white_rook:
-cmp al , 'r'
-jnz not_black_rook
-mov curr_draw,offset BROOK
-CALL FAR PTR DrawPiece
-not_black_rook:
-cmp al , 'h'
-jnz not_black_knight
-mov curr_draw,offset BKNIGHT
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_black_knight:
-cmp al , 'H'
-jnz not_white_knight
-mov curr_draw,offset WKNIGHT
-CALL FAR PTR DrawPiece
-not_white_knight:
-cmp al , 'p'
-jnz not_black_pawn
-mov curr_draw,offset BPAWN
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_black_pawn:
-cmp al , 'P'
-jnz not_white_pawn
-mov curr_draw,offset WPAWN
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_white_pawn:
-cmp al , 'k'
-jnz not_black_king
-mov curr_draw,offset BKING
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_black_king:
-cmp al , 'K'
-jnz not_white_king
-mov curr_draw,offset WKING
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_white_king:
-cmp al , 'q'
-jnz not_black_queen
-mov curr_draw,offset BQUEEN
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_black_queen:
-cmp al , 'Q'
-jnz not_white_queen
-mov curr_draw,offset WQUEEN
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_white_queen:
-cmp al , 'b'
-jnz not_black_bishop
-mov curr_draw,offset BBISHOP
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_black_bishop:
-cmp al , 'B'
-jnz not_white_bishop
-mov curr_draw,offset WBISHOP
-CALL FAR PTR DrawPiece
-jmp  nextPiece
-not_white_bishop:
-nextPiece:
-pop si
-pop cx
-inc si
-
-inc drawCol
-dec ch
-cmp ch,0
-je exiti
-jmp  inner_pieces_draw
-exiti:
-inc drawRow
-dec cl
-cmp cl,00h
-je done
-jmp  outer_pieces_draw
-done:
-
-
-
-ret
-drawAllPieces ENDP
 
 ; gets cell row and col then draws it
 drawPlayer1 proc far
@@ -727,6 +742,15 @@ mov Clearbool,1
 notclr1:
 
 
+cmp ah,62
+je f4condition
+jmp notjmp
+
+f4condition:
+mov f4bool,1
+jmp moved 
+
+notjmp:
 
 cmp ah,48h
 jnz not_up_help
@@ -988,6 +1012,8 @@ CheckP1Moves ENDP
 
 
 
+
+
 CheckP2Moves proc far
 
 mov ah,01h
@@ -1001,6 +1027,21 @@ notclr2:
 ;mov dl,ah
 ;mov ah,07         ;Read one char and put in al
 ;int 21h  
+
+
+
+cmp ah,62
+je f4conditionp2
+jmp notjmp2
+
+f4conditionp2:
+mov f4bool,1
+jmp moved2 
+
+notjmp2:
+
+
+
 cmp ah,17
 jnz not_w
 
@@ -1583,6 +1624,18 @@ CheckPlayerOverlap ENDP
   ;mov ah,07         ;Read one char and put in al
   ;int 21h  
 
+
+  cmp ah,62
+  je f4conditionMov1
+  jmp ContinueMov
+
+  f4conditionMov1:
+  mov f4bool,1
+  jmp flagNoPiece 
+
+  ContinueMov:
+
+
   cmp ah,28
   jne flagNoPieceHelp
   jmp notjump
@@ -1642,7 +1695,6 @@ CheckPlayerOverlap ENDP
     popa
     cmp currPiece,"*"
     jne notEmpty1
-
     mov ch,getcol
     mov cl,getrow
     mov [si],cl
@@ -1656,6 +1708,31 @@ CheckPlayerOverlap ENDP
     mov [si],cx
     inc ColorOffset
     pop si
+    dec getrow
+    pusha
+    cmp getrow,4
+    jne noextramove1
+    pusha
+    CALL FAR PTR getCellData
+    popa
+    cmp currPiece,'*'
+    jne noextramove1
+    mov cl,getrow
+    mov ch,getCol
+    mov [si],cl
+    inc si
+    mov [di],ch
+    inc di
+    push si
+    lea si,CurrentMovesColors
+    add si,ColorOffset
+    mov cx,0eh
+    mov [si],cx
+    inc ColorOffset
+    pop si
+    noextramove1:
+    popa
+    inc getrow
     notEmpty1:
     dec getcol
     ; overflow
@@ -3438,7 +3515,7 @@ CheckPlayerOverlap ENDP
       popa
 
       cmp currPiece,'a'
-      jg nodiagonalRhelph2
+      ja nodiagonalRhelph2
       cmp currPiece,'*'
       jne enemyDRh2
       mov ch,getcol
@@ -3501,7 +3578,7 @@ CheckPlayerOverlap ENDP
       popa
 
       cmp currPiece,'a'
-      jg nodiagonalRhelph3
+      ja nodiagonalRhelph3
       cmp currPiece,'*'
       jne enemyDRh3
       mov ch,getcol
@@ -3563,7 +3640,7 @@ CheckPlayerOverlap ENDP
       popa
 
       cmp currPiece,'a'
-      jg nodiagonalRhelph4
+      ja nodiagonalRhelph4
       cmp currPiece,'*'
       jne enemyDRh4
       mov ch,getcol
@@ -3858,6 +3935,17 @@ int 16h
 ;mov ah,07         ;Read one char and put in al
 ;int 21h  
 
+  cmp ah,62
+  je f4conditionMov2
+  jmp ContinueMov2
+
+  f4conditionMov2:
+  mov f4bool,1
+  jmp flagNoPiece2 
+
+  ContinueMov2:
+
+
 cmp ah,16	
 jne flagNoPieceHelp2
 jmp notjump2
@@ -3931,6 +4019,31 @@ popa
   mov [si],cx
   inc ColorOffset2
   pop si
+    inc getrow
+    pusha
+    cmp getrow,3
+    jne noextramove2
+    pusha
+    CALL FAR PTR getCellData
+    popa
+    cmp currPiece,'*'
+    jne noextramove2
+    mov cl,getrow
+    mov ch,getCol
+    mov [si],cl
+    inc si
+    mov [di],ch
+    inc di
+    push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+    noextramove2:
+    popa
+    dec getrow
   notEmpty12:
   dec getcol
   cmp getcol,-1
@@ -5551,541 +5664,540 @@ notq2:
 
 ; ;! Horse
     cmp bl,"H"
-    jne nothhelp2
-    jmp yesh2
-    nothhelp2:
-    jmp noth2
-    yesh2:
+      jne nothhelp2
+      jmp yesh2
+      nothhelp2:
+      jmp noth2
+      yesh2:
+      
+      ; mov cl,temprow
+      ; mov getrow,cl
+      ; mov cl,tempcol
+      ; mov getcol,cl
+
+      dec getrow
+      dec getrow
+      inc getCol
+
+
+      mov cl,getrow
+      cmp cl,-1
+      je nodiagonalRhelph22
+
+      mov cl,getrow
+      cmp cl,-2
+      je nodiagonalRhelph22
+
     
-    ; mov cl,temprow
-    ; mov getrow,cl
-    ; mov cl,tempcol
-    ; mov getcol,cl
+      mov ch,getCol
+      cmp ch,8
+      je nodiagonalRhelph22
+      pusha
+        Call FAR PTR getCellData
+      popa
 
-    dec getrow
-    dec getrow
-    inc getCol
-
-
-    mov cl,getrow
-    cmp cl,-1
-    je nodiagonalRhelph22
-
-    mov cl,getrow
-    cmp cl,-2
-    je nodiagonalRhelph22
-
-   
-    mov ch,getCol
-    cmp ch,8
-    je nodiagonalRhelph22
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh22
-    cmp currPiece,'A'
-    jae nodiagonalRhelph22
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-    jmp notenemyDRh2
-    enemyDRh22:
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh22:
-      ;jmp notupr 
-    nodiagonalRhelph22:
-
-    notdiagonalRh22:
-    
-
-
-    ;2nd part
-    mov cl,temprow
-    mov getrow,cl
-    mov cl,tempcol
-    mov getcol,cl
-
-    dec getrow
-    dec getrow
-    dec getCol
-
-    mov cl,getrow
-    cmp cl,-1
-    je nodiagonalRhelph12
-    mov cl,getrow
-    cmp cl,-2
-    je nodiagonalRhelph12
-    mov ch,getCol
-    cmp ch,-1
-    je nodiagonalRhelph12
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh12
-    cmp currPiece,'A'
-    jae nodiagonalRhelph12
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-
-    inc getrow
-    inc getrow
-    inc getCol
-    jmp notenemyDRh12
-    enemyDRh12:
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
+      cmp currPiece,'Z'
+      ja enemyDRh22
+      cmp currPiece,'*'
+      jne nodiagonalRhelph22
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+      jmp notenemyDRh22
+      enemyDRh22:
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
     lea si,CurrentMovesColors2
     add si,ColorOffset2
     mov cx,0ch
     mov [si],cx
     inc ColorOffset2
     pop si
-      ; change color ya ali
-    notenemyDRh12:
-      ;jmp notupr 
-    nodiagonalRhelph12:
+        ; change color ya ali
+      notenemyDRh22:
+        ;jmp notupr 
+      nodiagonalRhelph22:
 
-    notdiagonalRh12:
-    
+      notdiagonalRh22:
       
-    mov cl,temprow
-    mov getrow,cl
-    mov cl,tempcol
-    mov getcol,cl
-
-    inc getrow
-    inc getrow
-    dec getCol
-
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph222
-    mov cl,getrow
-    cmp cl,9
-    je nodiagonalRhelph222
-    mov ch,getCol
-    cmp ch,-1
-    je nodiagonalRhelph222
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh222
-    cmp currPiece,'A'
-    jae nodiagonalRhelph222
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-    jmp notenemyDRh222
-    enemyDRh222:
-    ;mov ch,getcol
-    ;mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh222:
-      ;jmp notupr 
-    nodiagonalRhelph222:
-
-    notdiagonalRh222:
 
 
-
-    mov cl,temprow
-    mov getrow,cl
-    mov cl,tempcol
-    mov getcol,cl
-
-    inc getrow
-    inc getrow
-    inc getCol
-
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph32
-    mov cl,getrow
-    cmp cl,9
-    je nodiagonalRhelph32
-    mov ch,getCol
-    cmp ch,8
-    je nodiagonalRhelph32
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh32
-    cmp currPiece,'A'
-    jae nodiagonalRhelph32
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-  
-    jmp notenemyDRh32
-    enemyDRh32:
-    ;mov ch,getcol
-    ;mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh32:
-      ;jmp notupr 
-    nodiagonalRhelph32:
-
-    notdiagonalRh32:
-
-    
-    mov cl,temprow
-    mov getrow,cl
-    mov cl,tempcol
-    mov getcol,cl
-
-    inc getrow
-    dec getCol
-    dec getCol
-    mov cl,getCol
-    cmp cl,-1
-    je nodiagonalRhelph42
-    mov ch,getCol
-    cmp ch,-2
-    je nodiagonalRhelph42
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph42
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh42
-    cmp currPiece,'A'
-    jae nodiagonalRhelph42
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-  
-    jmp notenemyDRh42
-    enemyDRh42:
-    ;mov ch,getcol
-    ;mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh42:
-      ;jmp notupr 
-    nodiagonalRhelph42:
-
-    notdiagonalRh42:
-
-
-
-    mov cl,temprow
-    mov getrow,cl
-    mov cl,tempcol
-    mov getcol,cl
-
-    dec getrow
-    inc getCol
-    inc getCol
-    mov cl,getCol
-    cmp cl,9
-    je nodiagonalRhelph52
-    mov ch,getCol
-    cmp ch,8
-    je nodiagonalRhelph52
-    mov cl,getrow
-    cmp cl,-1
-    je nodiagonalRhelph52
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-    cmp currPiece,'Z'
-    ja enemyDRh52
-    cmp currPiece,'A'
-    jae nodiagonalRhelph52
-    mov ch,getcol
-    mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-  
-    jmp notenemyDRh52
-    enemyDRh52:
-    ;mov ch,getcol
-    ;mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-     push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh52:
-      ;jmp notupr 
-    nodiagonalRhelph52:
-
-    notdiagonalRh52:
-
-    mov cl,temprow
-    mov getrow,cl
-
-
-
-    mov ch,tempcol
-    mov getcol,ch
-
-    dec getrow
-    dec getCol
-    dec getCol
-
-
-    mov cl,getCol
-    cmp cl,-1
-    je nodiagonalRhelph72
-
-    mov cl,getrow
-    cmp cl,-1
-    je nodiagonalRhelph72
-
-    mov ch,getCol
-    cmp ch,-2
-    je nodiagonalRhelph72
-
-
-    pusha
-      Call FAR PTR getCellData
-    popa
-
-
-    
-      cmp currPiece,'Z'
-      ja enemyDRh72
-      cmp currPiece,'A'
-      jae nodiagonalRhelph72
-      mov ch,getcol
-      mov cl,getrow
-      mov [si],cl
-      mov [di],ch
-      inc si
-      inc di
-      push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-    
-    jmp notenemyDRh72
-    enemyDRh72:
-    ;mov ch,getcol
-    ;mov cl,getrow
-    mov [si],cl
-    mov [di],ch
-    inc si
-    inc di
-    push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh72:
-      ;jmp notupr 
-    nodiagonalRhelph72:
-
-    notdiagonalRh72:
-
-    pusha
+      ;2nd part
       mov cl,temprow
       mov getrow,cl
-      mov ch,tempcol
-      mov getcol,ch
-    popa
+      mov cl,tempcol
+      mov getcol,cl
 
-    add getcol,2
-    inc getrow
+      dec getrow
+      dec getrow
+      dec getCol
 
+      mov cl,getrow
+      cmp cl,-1
+      je nodiagonalRhelph12
+      mov cl,getrow
+      cmp cl,-2
+      je nodiagonalRhelph12
+      mov ch,getCol
+      cmp ch,-1
+      je nodiagonalRhelph12
+      pusha
+        Call FAR PTR getCellData
+      popa
 
-    mov cl,getCol
-    cmp cl,8
-    je nodiagonalRhelph82
-    mov cl,getCol
-    cmp cl,9
-    je nodiagonalRhelph82
-    mov cl,getrow
-    cmp cl,8
-    je nodiagonalRhelph82
-    ;? error here ch and cl 
-    mov ch,getCol
-    cmp ch,9
-    je nodiagonalRhelph82
-    pusha
-      Call FAR PTR getCellData
-    popa
       cmp currPiece,'Z'
-      ja enemyDRh82
-      cmp currPiece,'A'
-      jae nodiagonalRhelph82
+      ja enemyDRh12
+      cmp currPiece,'*'
+      jne nodiagonalRhelph12
       mov ch,getcol
       mov cl,getrow
       mov [si],cl
       mov [di],ch
       inc si
       inc di
-        push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0dh
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-    jmp notenemyDRh82
-    enemyDRh82:
-    ;mov ch,getcol
-    ;mov cl,getrow
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+
+      inc getrow
+      inc getrow
+      inc getCol
+      jmp notenemyDRh12
+      enemyDRh12:
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh12:
+        ;jmp notupr 
+      nodiagonalRhelph12:
+
+      notdiagonalRh12:
+      
+        
+      mov cl,temprow
+      mov getrow,cl
+      mov cl,tempcol
+      mov getcol,cl
+
+      inc getrow
+      inc getrow
+      dec getCol
+
+      mov cl,getrow
+      cmp cl,8
+      je nodiagonalRhelph225
+      mov cl,getrow
+      cmp cl,9
+      je nodiagonalRhelph225
+      mov ch,getCol
+      cmp ch,-1
+      je nodiagonalRhelph225
+      pusha
+        Call FAR PTR getCellData
+      popa
+
+      cmp currPiece,'Z'
+      ja enemyDRh225
+      cmp currPiece,'*'
+      jne nodiagonalRhelph225
+            mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+      jmp notenemyDRh225
+      enemyDRh225:
+      ;mov ch,getcol
+      ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh225:
+        ;jmp notupr 
+      nodiagonalRhelph225:
+
+      notdiagonalRh225:
+
+
+
+      mov cl,temprow
+      mov getrow,cl
+      mov cl,tempcol
+      mov getcol,cl
+
+      inc getrow
+      inc getrow
+      inc getCol
+
+      mov cl,getrow
+      cmp cl,8
+      je nodiagonalRhelph32
+      mov cl,getrow
+      cmp cl,9
+      je nodiagonalRhelph32
+      mov ch,getCol
+      cmp ch,8
+      je nodiagonalRhelph32
+      pusha
+        Call FAR PTR getCellData
+      popa
+
+      cmp currPiece,'Z'
+      ja enemyDRh32
+      cmp currPiece,'*'
+      jne nodiagonalRhelph32
+      mov ch,getcol
+      mov cl,getrow
       mov [si],cl
       mov [di],ch
       inc si
       inc di
       push si
-  lea si,CurrentMovesColors2
-  add si,ColorOffset2
-  mov cx,0ch
-  mov [si],cx
-  inc ColorOffset2
-  pop si
-      ; change color ya ali
-    notenemyDRh82:
-      ;jmp notupr 
-    nodiagonalRhelph82:
-
-    notdiagonalRh82:
-
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
     
+      jmp notenemyDRh32
+      enemyDRh32:
+      ;mov ch,getcol
+      ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+      push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh32:
+        ;jmp notupr 
+      nodiagonalRhelph32:
+
+      notdiagonalRh32:
+
+      
+      mov cl,temprow
+      mov getrow,cl
+      mov cl,tempcol
+      mov getcol,cl
+
+      inc getrow
+      dec getCol
+      dec getCol
+      mov cl,getCol
+      cmp cl,-1
+      je nodiagonalRhelph42
+      mov ch,getCol
+      cmp ch,-2
+      je nodiagonalRhelph42
+      mov cl,getrow
+      cmp cl,8
+      je nodiagonalRhelph42
+      pusha
+        Call FAR PTR getCellData
+      popa
+
+      cmp currPiece,'Z'
+      ja enemyDRh42
+      cmp currPiece,'*'
+      jne nodiagonalRhelph42
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+    
+      jmp notenemyDRh42
+      enemyDRh42:
+      ;mov ch,getcol
+      ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh42:
+        ;jmp notupr 
+      nodiagonalRhelph42:
+
+      notdiagonalRh42:
+
+
+
+      mov cl,temprow
+      mov getrow,cl
+      mov cl,tempcol
+      mov getcol,cl
+
+      dec getrow
+      inc getCol
+      inc getCol
+      mov cl,getCol
+      cmp cl,9
+      je nodiagonalRhelph52
+      mov ch,getCol
+      cmp ch,8
+      je nodiagonalRhelph52
+      mov cl,getrow
+      cmp cl,-1
+      je nodiagonalRhelph52
+      pusha
+        Call FAR PTR getCellData
+      popa
+
+      cmp currPiece,'Z'
+      ja enemyDRh52
+      cmp currPiece,'*'
+      jne nodiagonalRhelph52
+      mov ch,getcol
+      mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+      push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+    
+      jmp notenemyDRh52
+      enemyDRh52:
+      ;mov ch,getcol
+      ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+      push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh52:
+        ;jmp notupr 
+      nodiagonalRhelph52:
+
+      notdiagonalRh52:
+
+      mov cl,temprow
+      mov getrow,cl
+
+
+
+      mov ch,tempcol
+      mov getcol,ch
+
+      dec getrow
+      dec getCol
+      dec getCol
+
+
+      mov cl,getCol
+      cmp cl,-1
+      je nodiagonalRhelph72
+
+      mov cl,getrow
+      cmp cl,-1
+      je nodiagonalRhelph72
+
+      mov ch,getCol
+      cmp ch,-2
+      je nodiagonalRhelph72
+
+
+      pusha
+        Call FAR PTR getCellData
+      popa
+
+
+      
+        cmp currPiece,'Z'
+        ja enemyDRh72
+        cmp currPiece,'*'
+        jne nodiagonalRhelph72
+        mov ch,getcol
+        mov cl,getrow
+        mov [si],cl
+        mov [di],ch
+        inc si
+        inc di
+         push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+      
+      jmp notenemyDRh72
+      enemyDRh72:
+      ;mov ch,getcol
+      ;mov cl,getrow
+      mov [si],cl
+      mov [di],ch
+      inc si
+      inc di
+       push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+        ; change color ya ali
+      notenemyDRh72:
+        ;jmp notupr 
+      nodiagonalRhelph72:
+
+      notdiagonalRh72:
+
+      pusha
+        mov cl,temprow
+        mov getrow,cl
+        mov ch,tempcol
+        mov getcol,ch
+      popa
+
+      add getcol,2
+      inc getrow
+
+
+      mov cl,getCol
+      cmp cl,8
+      je nodiagonalRhelph82
+      mov cl,getCol
+      cmp cl,9
+      je nodiagonalRhelph82
+      mov cl,getrow
+      cmp cl,8
+      je nodiagonalRhelph82
+      ;? error here ch and cl 
+      mov ch,getCol
+      cmp ch,9
+      je nodiagonalRhelph82
+      pusha
+        Call FAR PTR getCellData
+      popa
+        cmp currPiece,'Z'
+        ja enemyDRh82
+        cmp  currPiece,'*'
+        jne nodiagonalRhelph82
+        mov ch,getcol
+        mov cl,getrow
+        mov [si],cl
+        mov [di],ch
+        inc si
+        inc di
+          push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
+    mov cx,0dh
+    mov [si],cx
+    inc ColorOffset2
+    pop si
+      jmp notenemyDRh82
+      enemyDRh82:
+      ;mov ch,getcol
+      ;mov cl,getrow
+        mov [si],cl
+        mov [di],ch
+        inc si
+        inc di
+         push si
+    lea si,CurrentMovesColors
+    add si,ColorOffset
+    mov cx,0ch
+    mov [si],cx
+    inc ColorOffset
+    pop si
+        ; change color ya ali
+      notenemyDRh82:
+        ;jmp notupr 
+      nodiagonalRhelph82:
+
+      notdiagonalRh82:
+
+      
 
 
 
 
-  noth2:
-
+    noth2:
 flagNoPiece2:
 
 
@@ -6261,6 +6373,18 @@ releaseClipBoard1 proc far
   normalRealase:
   mov ah,01h
   int 16h
+
+
+  cmp ah,62
+  je f4conditionRel
+  jmp ContinueRel
+
+  f4conditionRel:
+  mov f4bool,1
+  jmp exitRelease1 
+
+  ContinueRel:
+
   cmp ah,28
   jne exitRelease1help11
   jmp notexitrelease11
@@ -6304,7 +6428,7 @@ releaseClipBoard1 proc far
   jmp exitandreset1
   notexitandreset1:
   mov1:
-
+  
   pusha
   call far ptr GetTimeFromInterrupt
   popa
@@ -6339,7 +6463,13 @@ releaseClipBoard1 proc far
 
   mov ch,getCol
   mov brushCol,ch
-
+  cmp clipBoardP1,'k'
+  jne proceed
+  pusha
+  mov q1,cl
+  mov q1[1],ch
+  popa
+  proceed:
   pusha
   call far ptr SetBrush
   popa
@@ -6390,6 +6520,14 @@ releaseClipBoard1 proc far
   mov si,0
   CALL FAR PTR drawSingleCell
   popa   
+
+   pusha
+   call far ptr checkmateP1
+  popa
+
+  pusha
+   call far ptr checkmateP2
+  popa
 
 
   exitandreset1:
@@ -6454,6 +6592,18 @@ releaseClipBoard2 proc far
   normalRealase2:
   mov ah,01h
   int 16h
+
+  cmp ah,62
+  je f4conditionRel2
+  jmp ContinueRel2
+
+  f4conditionRel2:
+  mov f4bool,1
+  jmp exitRelease12 
+
+  ContinueRel2:
+
+
   cmp ah,16
   jne exitRelease1help112
   jmp notexitrelease112
@@ -6532,7 +6682,13 @@ releaseClipBoard2 proc far
 
   mov ch,getCol
   mov brushCol,ch
-
+  cmp clipBoardP2,'K'
+  jne proceed2
+  pusha
+  mov q2,cl
+  mov q2[1],ch
+  popa
+  proceed2:
   pusha
   call far ptr SetBrush
   popa
@@ -6558,15 +6714,14 @@ releaseClipBoard2 proc far
   popa 
 
   pusha
-   
-   mov dl,currColor
-   mov dh,00h
-   mov bl,getrow
-   mov bh,00h
-   mov al,getCol
-   mov ah,0
-   mov si,0
-   CALL FAR PTR drawSingleCell
+  mov dl,currColor
+  mov dh,00h
+  mov bl,getrow
+  mov bh,00h
+  mov al,getCol
+  mov ah,0
+  mov si,0
+  CALL FAR PTR drawSingleCell
   popa 
   mov bx,brush
   mov cl,'*'
@@ -6582,7 +6737,12 @@ releaseClipBoard2 proc far
   CALL FAR PTR drawSingleCell
   popa   
 
-
+   pusha
+  call far ptr checkmateP1
+  popa
+  pusha
+   call far ptr checkmateP2
+  popa
   exitandreset12:
   pusha
   CALL FAR PTR ClearHighlighted2
@@ -6914,9 +7074,14 @@ SetCellTime Proc far
   jmp notgameover
   yesgameover:
   cmp GraveP1,'k'
-  je p2wins
+  je p2winshelp
+  jmp nop2wins
+  p2winshelp:
+  jmp p2wins
+  nop2wins:
   jmp notgameover
   p1wins:
+  mov GraveP2,'*'
   mov Player1WinsBool,1
   CALL FAR PTR InitialiseStatusBar
   mov  dl, 33   ;Column
@@ -6989,6 +7154,7 @@ int  10h
 
   jmp notgameover
   p2wins:
+    mov GraveP1,'*'
   mov Player2WinsBool,1
 
   CALL FAR PTR InitialiseStatusBar
@@ -7129,6 +7295,13 @@ not_white_bishop1:
 ret
 DrawOnePiece ENDP
 InitialiseStatusBar PROC FAR
+  mov f4bool,0
+  CALL FAR PTR GetTimeFromInterrupt
+  mov ax,SystemTime
+  mov playtime,ax
+
+
+
   mov dl,0fh
   mov dh,00h
   mov bl,8
@@ -7249,6 +7422,57 @@ mov  bl, 03h  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
+
+mov  dl, 17   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'T'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+
+mov  al, ':'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov  al, '0'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, '0'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+
+mov  al, ':'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, '0'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, '0'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+
  ret
 InitialiseStatusBar ENDP
 
@@ -7303,4 +7527,1433 @@ inc P2Status
 noupdates:
 ret
 UpdateStatusBar ENDP
+
+InitialisePieces proc far
+lea si,Pieces
+lea di,OldPieces
+
+
+
+mov ch,8
+
+outerinit:
+mov cl,8
+
+
+
+innerinit:
+mov al,[di]
+mov [si],al
+inc si
+inc di
+dec cl
+jnz innerinit
+dec ch
+jnz outerinit
+
+
+
+ret
+InitialisePieces endp
+RESETGAME PROC FAR
+  mov f4bool , 0
+  mov Player1WinsBool,0
+  mov Player2WinsBool,0
+  mov Player1square,6
+  mov Player1square[1],4
+  mov Player2square,1
+  mov Player2square[1],4
+  mov P1Status,20
+
+  mov P2Status,20
+
+mov P1Status[1],33
+
+mov P2Status[1],3
+
+mov Secs,0
+mov Mins,0
+CALL FAR PTR resetcurrentmoves1
+CALL FAR PTR resetcurrentmoves2
+
+
+ret
+RESETGAME ENDP
+
+
+
+
+displaytime proc far
+
+
+call far ptr GetTimeFromInterrupt
+mov ax,SystemTime
+cmp playtime,ax
+je noDisplayhelp
+jmp display
+noDisplayhelp:
+jmp noDisplay
+display:
+cmp Secs,59
+je IncreaseMinutes
+inc Secs
+jmp notIncreaseMin
+
+
+
+IncreaseMinutes:
+mov Secs,0
+inc Mins
+
+
+
+
+notIncreaseMin:
+
+pusha
+mov al,Secs
+mov ah,0
+mov cl,10
+div cl
+
+add al,30h
+add ah,30h
+
+mov dispsecs,al
+mov dispsecs[1],ah
+popa
+
+
+mov playtime,ax
+mov  dl, 17   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'T'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+
+mov  al, ':'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov  al, '0'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov  al, Mins
+add al,30h
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ':'
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, dispsecs
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, dispsecs[1]
+mov  bl, 03h  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+noDisplay:
+ret
+displaytime endp
+
+
+
+
+
+
+
+
+
+
+checkmateP1 proc far
+
+
+;! checking for right and left
+
+mov cl,q1[1]
+mov ch,q1
+
+;!left
+  
+  chckleft:
+  cmp cl,0
+  je nextchck 
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck
+  cmp currPiece,'R'
+  je checkmate1help
+  cmp currPiece,'Q'
+  je checkmate1help
+  cmp currPiece,'*'
+  je chckleft 
+  nextchck:
+jmp notcheckmate11
+checkmate1help:
+jmp checkmate1
+notcheckmate11:
+mov cl,q1[1]
+mov ch,q1
+
+;!right
+
+  chckright:
+  cmp cl,7
+  je nextchck1 
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck1
+  cmp currPiece,'R'
+  je checkmate1h
+  cmp currPiece,'Q'
+  je checkmate1h 
+  cmp currPiece,'*'
+  je chckright 
+  nextchck1:
+  jmp cont1
+  checkmate1h:
+  jmp checkmate1
+  cont1:
+mov cl,q1[1]
+mov ch,q1
+;!Up
+  chckup:
+  cmp ch,0
+  je nextchck2 
+  dec ch
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck2
+  cmp currPiece,'R'
+  je checkmate1hh
+  cmp currPiece,'Q'
+  je checkmate1hh
+  cmp currPiece,'*'
+  je chckup 
+  nextchck2:
+
+  jmp cont2
+  checkmate1hh:
+  jmp checkmate1
+  cont2:
+mov cl,q1[1]
+mov ch,q1
+;!Down
+  chckdown:
+  cmp ch,7
+  je nextchck3
+  inc ch
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck3
+  cmp currPiece,'R'
+  je checkmate1hhh
+  cmp currPiece,'Q'
+  je checkmate1hhh
+  cmp currPiece,'*'
+  je chckdown 
+  nextchck3:
+  jmp cont4
+  checkmate1hhh:
+  jmp checkmate1
+  cont4:
+  mov cl,q1[1]
+  mov ch,q1
+  ;!DiagonalUp
+  chckdup:
+  cmp ch,0
+  je nextchck4
+  cmp cl,7
+  je nextchck4
+  dec ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck4
+  cmp currPiece,'B'
+  je checkmate1h3
+  cmp currPiece,'Q'
+  je checkmate1h3
+  cmp currPiece,'*'
+  je chckdup 
+  nextchck4:
+  
+  jmp cont5
+  checkmate1h3:
+  jmp checkmate1
+  cont5:
+  mov cl,q1[1]
+  mov ch,q1
+  ;!DiagonalDown
+  chckddown:
+  cmp ch,0
+  je nextchck5
+  cmp cl,0
+  je nextchck5
+  dec ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck5
+  cmp currPiece,'B'
+  je checkmate1h4
+  cmp currPiece,'Q'
+  je checkmate1h4
+  cmp currPiece,'*'
+  je chckddown 
+  nextchck5:
+
+  jmp cont6
+  checkmate1h4:
+  jmp checkmate1
+  cont6:
+  mov cl,q1[1]
+  mov ch,q1
+  ;!DiagonalDownR
+  chckddownr:
+  cmp ch,7
+  je nextchck6
+  cmp cl,7
+  je nextchck6
+  inc ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck6
+  cmp currPiece,'B'
+  je checkmate1h7
+
+  cmp currPiece,'Q'
+  je checkmate1h7
+  cmp currPiece,'*'
+  je chckddownr 
+  nextchck6:
+  jmp cont9
+  checkmate1h7:
+  jmp checkmate1
+  cont9:
+
+  mov cl,q1[1]
+  mov ch,q1
+  ;!DiagonalDownL
+  chckddownl:
+  cmp ch,7
+  je nextchck7
+  cmp cl,0
+  je nextchck7
+  inc ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextchck7
+  cmp currPiece,'B'
+  je checkmate1h10
+  cmp currPiece,'Q'
+  je checkmate1h10
+  cmp currPiece,'*'
+  je chckddownl 
+  nextchck7:
+jmp cont10
+  checkmate1h10:
+  jmp checkmate1
+  cont10:
+
+
+  ;!pawnCheck
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,0
+  je nextnext
+  cmp cl,7
+  je nextnext
+  dec ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext
+  cmp currPiece,'P'
+  je checkmate1h11
+
+  jmp cont13
+  checkmate1h11:
+  jmp checkmate1
+  cont13:
+
+  mov cl,q1[1]
+  mov ch,q1
+
+  nextnext:
+
+  cmp ch,0
+  je nextnext2
+  cmp cl,0
+  je nextnext2
+  dec ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext2
+  cmp currPiece,'P'
+  je checkmate1h15
+  jmp cont19
+  checkmate1h15:
+  jmp checkmate1
+  cont19:
+  nextnext2:
+
+
+  ;!Horse
+
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,1
+  jbe nextnext3
+  cmp cl,0
+  je nextnext3
+  dec ch
+  dec ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext3
+  cmp currPiece,'H'
+  je checkmate1h21
+
+  jmp cont29
+  checkmate1h21:
+  jmp checkmate1
+  cont29:
+
+  nextnext3:
+  
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,1
+  jbe nextnext4
+  cmp cl,7
+  je nextnext4
+  dec ch
+  dec ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext4
+  cmp currPiece,'H'
+  je checkmate1h30
+  
+
+  jmp cont50
+  checkmate1h30:
+  jmp checkmate1
+  cont50:
+
+  nextnext4:
+
+
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,0
+  je nextnext5
+  cmp cl,6
+  jae nextnext5
+  dec ch
+  inc cl
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext5
+  cmp currPiece,'H'
+  je checkmate1h31
+
+  jmp cont51
+  checkmate1h31:
+  jmp checkmate1
+  cont51:
+
+  nextnext5:
+
+
+  
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,7
+  je nextnext6
+  cmp cl,6
+  jae nextnext6
+  inc ch
+  inc cl
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext6
+  cmp currPiece,'H'
+  je checkmate1h60
+
+
+  jmp cont60
+  checkmate1h60:
+  jmp checkmate1
+  cont60:
+  nextnext6:
+
+   mov cl,q1[1]
+  mov ch,q1
+  cmp ch,6
+  jae nextnext7
+  cmp cl,7
+  jae nextnext7
+  inc ch
+  inc ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext7
+  cmp currPiece,'H'
+  je checkmate1h70
+
+  jmp cont70
+  checkmate1h70:
+  jmp checkmate1
+  cont70:
+
+  nextnext7:
+
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,6
+  jae nextnext8
+  cmp cl,0
+  jae nextnext8
+  inc ch
+  inc ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext8
+  cmp currPiece,'H'
+  je checkmate1
+
+
+
+  nextnext8:
+   
+
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,7
+  jae nextnext9
+  cmp cl,1
+  jbe nextnext9
+  inc ch
+  dec cl
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext9
+  cmp currPiece,'H'
+  je checkmate1
+
+
+
+  nextnext9:
+
+  mov cl,q1[1]
+  mov ch,q1
+  cmp ch,0
+  jbe nextnext10
+  cmp cl,1
+  jbe nextnext10
+  dec ch
+  dec cl
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'Z'
+  ja nextnext10
+  cmp currPiece,'H'
+  je checkmate1
+
+
+
+  nextnext10:
+jmp notcheckmate1
+checkmate1:
+mov  dl, 30   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'C'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'H'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'C'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'K'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'M'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'A'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'T'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov checkmate1bool,0
+jmp exitcheckmate
+notcheckmate1:
+cmp checkmate1bool,1
+je exitcheckmate
+mov checkmate1bool,1
+mov  dl, 30   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'I'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'N'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'G'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'A'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'M'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+exitcheckmate:
+ret
+checkmateP1 endp
+
+
+
+
+
+
+
+
+checkmateP2 proc far
+
+
+;! checking for right and left
+
+mov cl,q2[1]
+mov ch,q2
+
+;!left
+  
+  chcklefts:
+  cmp cl,0
+  je nextchcks 
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chcklefts
+  cmp currPiece,'Z'
+  jb nextchcks
+  cmp currPiece,'r'
+  je checkmate1helps
+  cmp currPiece,'q'
+  je checkmate1helps
+  nextchcks:
+jmp notcheckmate11s
+checkmate1helps:
+jmp checkmate2
+notcheckmate11s:
+mov cl,q2[1]
+mov ch,q2
+
+;!right
+
+  chckrights:
+  cmp cl,7
+  je nextchck1s 
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckrights 
+  cmp currPiece,'Z'
+  jb nextchck1s
+  cmp currPiece,'r'
+  je checkmate1hs
+  cmp currPiece,'q'
+  je checkmate1hs
+  nextchck1s:
+  jmp cont1s
+  checkmate1hs:
+  jmp checkmate2
+  cont1s:
+  mov cl,q2[1]
+  mov ch,q2
+;!Up
+  chckups:
+  cmp ch,0
+  je nextchck2s 
+  dec ch
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckups 
+  cmp currPiece,'Z'
+  jb nextchck2s
+  cmp currPiece,'r'
+  je checkmate1hhs
+  cmp currPiece,'q'
+  je checkmate1hhs
+  nextchck2s:
+
+  jmp cont2s
+  checkmate1hhs:
+  jmp checkmate2
+  cont2s:
+  mov cl,q2[1]
+  mov ch,q2
+;!Down
+    chckdowns:
+    cmp ch,7
+    je nextchck3s
+    inc ch
+    pusha
+    mov getrow,ch
+    mov getCol,cl
+    CALL FAR PTR getCellData
+    popa
+    cmp currPiece,'*'
+    je chckdowns 
+    cmp currPiece,'Z'
+    jb nextchck3s
+    cmp currPiece,'r'
+    je checkmate1hhhs
+    cmp currPiece,'q'
+    je checkmate1hhhs
+    nextchck3s:
+    jmp cont4s
+    checkmate1hhhs:
+    jmp checkmate2
+    cont4s:
+    mov cl,q2[1]
+    mov ch,q2
+;!DiagonalUp
+  chckdups:
+  cmp ch,0
+  je nextchck4s
+  cmp cl,7
+  je nextchck4s
+  dec ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckdups 
+  cmp currPiece,'Z'
+  jb nextchck4s
+  cmp currPiece,'b'
+  je checkmate1h3s
+  cmp currPiece,'q'
+  je checkmate1h3s
+  nextchck4s:
+  
+  jmp cont5s
+  checkmate1h3s:
+  jmp checkmate2
+  cont5s:
+  mov cl,q2[1]
+  mov ch,q2
+  ;!DiagonalDown
+  chckddowns:
+  cmp ch,0
+  je nextchck5s
+  cmp cl,0
+  je nextchck5s
+  dec ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckddowns 
+  cmp currPiece,'Z'
+  jb nextchck5s
+  cmp currPiece,'b'
+  je checkmate1h4s
+  cmp currPiece,'q'
+  je checkmate1h4s
+  nextchck5s:
+
+  jmp cont6s
+  checkmate1h4s:
+  jmp checkmate2
+  cont6s:
+  mov cl,q2[1]
+  mov ch,q2
+  ;!DiagonalDownR
+  chckddownrs:
+  cmp ch,7
+  je nextchck6s
+  cmp cl,7
+  je nextchck6s
+  inc ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckddownrs 
+  cmp currPiece,'Z'
+  jb nextchck6s
+  cmp currPiece,'b'
+  je checkmate1h7s
+
+  cmp currPiece,'q'
+  je checkmate1h7s
+  nextchck6s:
+  jmp cont9s
+  checkmate1h7s:
+  jmp checkmate2
+  cont9s:
+
+  mov cl,q2[1]
+  mov ch,q2
+  ;!DiagonalDownL
+  chckddownls:
+  cmp ch,7
+  je nextchck7s
+  cmp cl,0
+  je nextchck7s
+  inc ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je chckddownls 
+  cmp currPiece,'Z'
+  jb nextchck7s
+  cmp currPiece,'b'
+  je checkmate1h10s
+  cmp currPiece,'q'
+  je checkmate1h10s
+  nextchck7s:
+jmp cont10s
+  checkmate1h10s:
+  jmp checkmate2
+  cont10s:
+
+
+  ;!pawnCheck
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,7
+  je nextnexts
+  cmp cl,7
+  je nextnexts
+  inc ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont13s
+  cmp currPiece,'Z'
+  jb nextnexts
+  cmp currPiece,'p'
+  je checkmate1h11s
+
+  jmp cont13s
+  checkmate1h11s:
+  jmp checkmate2
+  cont13s:
+
+  mov cl,q2[1]
+  mov ch,q2
+
+  nextnexts:
+
+  cmp ch,7
+  je nextnext2s
+  cmp cl,0
+  je nextnext2s
+  inc ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont19s
+  cmp currPiece,'Z'
+  jb nextnext2s
+  cmp currPiece,'p'
+  je checkmate1h15s
+  jmp cont19s
+  checkmate1h15s:
+  jmp checkmate2
+  cont19s:
+  nextnext2s:
+
+
+  ;!Horse
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,1
+  jbe nextnext3s
+  cmp cl,0
+  je nextnext3s
+  dec ch
+  dec ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont29s
+  cmp currPiece,'Z'
+  jb nextnext3s
+  cmp currPiece,'h'
+  je checkmate1h21s
+
+  jmp cont29s
+  checkmate1h21s:
+  jmp checkmate2
+  cont29s:
+
+  nextnext3s:
+  
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,1
+  jbe nextnext4s
+  cmp cl,7
+  je nextnext4s
+  dec ch
+  dec ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont50s
+  cmp currPiece,'Z'
+  jb nextnext4s
+  cmp currPiece,'h'
+  je checkmate1h30s
+  
+
+  jmp cont50s
+  checkmate1h30s:
+  jmp checkmate2
+  cont50s:
+
+  nextnext4s:
+
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,0
+  je nextnext5s
+  cmp cl,6
+  jae nextnext5s
+  dec ch
+  inc cl
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont51s
+  cmp currPiece,'Z'
+  jb nextnext5s
+  cmp currPiece,'h'
+  je checkmate1h31s
+
+  jmp cont51s
+  checkmate1h31s:
+  jmp checkmate2
+  cont51s:
+
+  nextnext5s:
+
+
+  
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,7
+  je nextnext6s
+  cmp cl,6
+  jae nextnext6s
+  inc ch
+  inc cl
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont60s
+  cmp currPiece,'Z'
+  jb nextnext6s
+  cmp currPiece,'h'
+  je checkmate1h60s
+
+
+  jmp cont60s
+  checkmate1h60s:
+  jmp checkmate2
+  cont60s:
+  nextnext6s:
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,6
+  jae nextnext7s
+  cmp cl,7
+  jae nextnext7s
+  inc ch
+  inc ch
+  inc cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je cont70s
+  cmp currPiece,'Z'
+  jb nextnext7s
+  cmp currPiece,'h'
+  je checkmate1h70s
+
+  jmp cont70s
+  checkmate1h70s:
+  jmp checkmate2
+  cont70s:
+
+  nextnext7s:
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,6
+  jae nextnext8s
+  cmp cl,0
+  jae nextnext8s
+  inc ch
+  inc ch
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je nextnext8s
+  cmp currPiece,'Z'
+  jb nextnext8s
+  cmp currPiece,'h'
+  je checkmate2
+
+
+
+  nextnext8s:
+   
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,7
+  jae nextnext9s
+  cmp cl,1
+  jbe nextnext9s
+  inc ch
+  dec cl
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je nextnext9s
+  cmp currPiece,'Z'
+  jb nextnext9s
+  cmp currPiece,'h'
+  je checkmate2
+
+
+
+  nextnext9s:
+
+  mov cl,q2[1]
+  mov ch,q2
+  cmp ch,0
+  jbe nextnext10s
+  cmp cl,1
+  jbe nextnext10s
+  dec ch
+  dec cl
+  dec cl
+  pusha
+  mov getrow,ch
+  mov getCol,cl
+  CALL FAR PTR getCellData
+  popa
+  cmp currPiece,'*'
+  je nextnext10s
+  cmp currPiece,'Z'
+  ja nextnext10s
+  cmp currPiece,'h'
+  je checkmate2
+
+
+
+  nextnext10s:
+  jmp notcheckmate2
+checkmate2:
+mov  dl, 0   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'C'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'H'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'C'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'K'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'M'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'A'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'T'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0ch  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+mov checkmate2bool,0
+jmp exitcheckmate2
+notcheckmate2:
+cmp checkmate2bool,1
+je exitcheckmate2
+mov checkmate2bool,1
+mov  dl, 0   ;Column
+mov  dh, 24   ;Row
+mov  bh, 0    ;Display page
+mov  ah, 02h  ;SetCursorPosition
+int  10h
+
+mov  al, 'I'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'N'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'G'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'A'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'M'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, 'E'
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+
+mov  al, ' '
+mov  bl, 0fh  ;Color is red
+mov  bh, 0    ;Display page
+mov  ah, 0eh  ;Teletype
+int  10h
+exitcheckmate2:
+ret
+checkmateP2 endp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 end main
