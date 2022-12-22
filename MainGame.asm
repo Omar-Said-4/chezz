@@ -6506,8 +6506,22 @@ releaseClipBoard1 proc far
   mov bx,timebrush
   mov [bx],cx
   popa
-
   
+  cmp clipBoardP2,'*'
+  je ppp
+  mov cl,getrow
+  mov ch,getcol
+  cmp cl,clipBoardP2[1] 
+  jne ppp
+  cmp ch,clipBoardP2[2]
+  jne ppp
+  pusha
+  CALL FAR PTR ClearHighlighted2
+  popa
+  Call Far ptr resetcurrentmoves2
+  mov clipBoardP2,'*'
+  mov P2validateBool,0
+  ppp:
   mov cl,getrow
   mov brushRow,cl
 
@@ -6729,7 +6743,21 @@ releaseClipBoard2 proc far
   mov [bx],cx
   popa
 
-  
+  cmp clipBoardP1,'*'
+  je ppp2
+  mov cl,getrow
+  mov ch,getcol
+  cmp cl,clipBoardP1[1] 
+  jne ppp2
+  cmp ch,clipBoardP1[2]
+  jne ppp2
+  pusha
+  CALL FAR PTR ClearHighlighted1
+  popa
+  Call Far ptr resetcurrentmoves1
+  mov clipBoardP1,'*'
+  mov P1validateBool,0
+  ppp2:
   mov cl,getrow
   mov brushRow,cl
 
