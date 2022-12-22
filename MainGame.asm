@@ -15,6 +15,8 @@ P1Status Db 20,33
 
 P2Status Db 20,3
 
+P1validateBool db 0
+P2validateBool db 0
 
 OverlapBool DB 0
 
@@ -293,13 +295,13 @@ msg2 db "To End The Program Press ESC $"
 ; Color Matrix
 
 OldPieces   DB 'R','H','B','K','Q','B','H','R'
-            DB 'P','P','P','P','P','P','P','P'
+            DB 'P','P','P','P','*','P','P','P'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','*','q','*','*','*'
             DB '*','*','*','*','*','*','*','*'
-            DB '*','*','*','*','*','*','*','*'
-            DB 'p','p','p','p','p','p','p','p'
-            DB 'r','h','b','k','q','b','h','r'
+            DB 'p','p','p','p','*','p','p','p'
+            DB 'r','h','b','k','*','b','h','r'
 
 
 
@@ -1608,16 +1610,24 @@ CheckPlayerOverlap ENDP
 ;TODO MOVES1
   GetAvaliableMoves proc far
 
-  ;lea BX,CurrentMovesRow
+  
   Mov ColorOffset,0
   xor SI,SI
   lea SI , CurrentMovesRow
-  ;mov SI,BX
-  cmp clipBoardP1,'*'
-  jne flagNoPieceHelp
   xor di,di
   lea di,CurrentMovesColumn
   xor ax,ax
+  cmp P1validateBool,1
+  je extravalhelp
+  
+  cmp clipBoardP1,'*'
+  jne flagNoPieceHelp
+  
+  jmp extc
+  extravalhelp:
+  jmp extraval
+  extc:
+  
   mov ah,01h
   int 16h
   ;mov dl,ah
@@ -1678,6 +1688,28 @@ CheckPlayerOverlap ENDP
     mov cl,getcol
     mov clipBoardP1[2],cl
   popa
+  jmp notextraval
+  extraval:
+  PUSHA
+  call far ptr ClearHighlighted1
+  POPA
+  PUSHA
+  Call Far ptr resetcurrentmoves1
+  POPA
+  mov bl,clipBoardP1
+  mov cl,clipBoardP1[1]
+  mov temprow,cl
+  mov getrow,cl
+  mov cl,clipBoardP1[2]
+  mov tempcol,cl
+  mov getcol,cl
+  Mov ColorOffset,0
+  xor SI,SI
+  lea SI , CurrentMovesRow
+  xor di,di
+  lea di,CurrentMovesColumn
+  xor ax,ax
+  notextraval:
   ; pawn movements
   ;!pawn
     cmp bl,"p"
@@ -1709,7 +1741,7 @@ CheckPlayerOverlap ENDP
     inc ColorOffset
     pop si
     dec getrow
-    pusha
+    ;pusha
     cmp getrow,4
     jne noextramove1
     pusha
@@ -1731,7 +1763,7 @@ CheckPlayerOverlap ENDP
     inc ColorOffset
     pop si
     noextramove1:
-    popa
+    ;popa
     inc getrow
     notEmpty1:
     dec getcol
@@ -1785,9 +1817,9 @@ CheckPlayerOverlap ENDP
     pop si
     alliep2:
     jmp flagNoPiece 
-
+    
     notp:
-
+    
 
   ;!rock
     cmp bl,"r"
@@ -3884,26 +3916,12 @@ CheckPlayerOverlap ENDP
 
 
 
-
+    
     noth:
-
+  
   flagNoPiece:
-
-
-  ; push ax
-  ; cmp Clearbool,1
-  ; je clrf
-  ; jmp notclrf
-  ; clrf:
-  ;   mov ah,0ch
-  ;   mov al,0
-  ;   int 21h
-  ;   dec Clearbool
-  ;   notclrf:
-  ;  ;mov  ah, 00h        ; BIOS.ReadKeyboardCharacter
-  ;  ; int  16h 
-  ; pop ax  
-
+  mov P1validateBool,0
+  
   ret
 GetAvaliableMoves ENDP
 
@@ -3924,11 +3942,20 @@ GetAvaliableMoves2 proc far
 Mov ColorOffset2,0
 xor SI,SI
 lea SI , CurrentMovesRow2
-;mov SI,BX
-cmp clipBoardP2,'*'
-jne flagNoPieceHelp2
 xor di,di
 lea di,CurrentMovesColumn2
+;mov SI,BX
+cmp P2validateBool,1
+je extravalhelp2
+cmp clipBoardP2,'*'
+jne flagNoPieceHelp2
+
+
+  jmp extc2
+  extravalhelp2:
+  jmp extraval2
+  extc2:
+
 mov ah,01h
 int 16h
 ;mov dl,ah
@@ -3988,6 +4015,28 @@ mov clipBoardP2[1],cl
 mov cl,getcol
 mov clipBoardP2[2],cl
 popa
+JMP notextraval2
+extraval2:
+  PUSHA
+  call far ptr ClearHighlighted2
+  POPA
+  PUSHA
+  Call Far ptr resetcurrentmoves2
+  POPA
+  mov bl,clipBoardP2
+  mov cl,clipBoardP2[1]
+  mov temprow,cl
+  mov getrow,cl
+  mov cl,clipBoardP2[2]
+  mov tempcol,cl
+  mov getcol,cl
+  Mov ColorOffset2,0
+  xor SI,SI
+  lea SI , CurrentMovesRow2
+  xor di,di
+  lea di,CurrentMovesColumn2
+  xor ax,ax
+  notextraval2:
 ; pawn movements
 ;!pawn
   cmp bl,"P"
@@ -4020,7 +4069,6 @@ popa
   inc ColorOffset2
   pop si
     inc getrow
-    pusha
     cmp getrow,3
     jne noextramove2
     pusha
@@ -4042,7 +4090,6 @@ popa
     inc ColorOffset2
     pop si
     noextramove2:
-    popa
     dec getrow
   notEmpty12:
   dec getcol
@@ -6199,7 +6246,7 @@ notq2:
 
     noth2:
 flagNoPiece2:
-
+MOV P2validateBool,0
 
 
 
@@ -6428,7 +6475,10 @@ releaseClipBoard1 proc far
   jmp exitandreset1
   notexitandreset1:
   mov1:
-  
+  cmp clipBoardP2,'*'
+  je contttr2
+  mov P2validateBool,1
+  contttr2:
   pusha
   call far ptr GetTimeFromInterrupt
   popa
@@ -6647,7 +6697,10 @@ releaseClipBoard2 proc far
   jmp exitandreset12
   notexitandreset12:
   mov12:
-
+  cmp clipBoardP1,'*'
+  je contttr
+  mov P1validateBool,1
+  contttr:
   pusha
   call far ptr GetTimeFromInterrupt
   popa
@@ -6787,7 +6840,10 @@ jnz deleting
 
 
 exitReset1:
+CMP P1validateBool,1
+JE NNN
 mov clipBoardP1,'*'
+NNN:
 ret
 resetcurrentmoves1 endp
 
@@ -6811,7 +6867,10 @@ jnz deleting2
 
 
 exitReset2:
+CMP P2validateBool,1
+JE NNN2
 mov clipBoardP2,'*'
+NNN2:
 ret
 
 resetcurrentmoves2 endp
