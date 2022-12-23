@@ -295,12 +295,12 @@ msg2 db "To End The Program Press ESC $"
 ; Color Matrix
 
 OldPieces   DB 'R','H','B','K','Q','B','H','R'
-            DB 'P','P','P','P','P','P','P','P'
+            DB 'P','P','P','*','p','P','P','P'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
-            DB 'p','p','p','p','p','p','p','p'
+            DB 'p','p','p','p','p','H','p','p'
             DB 'r','h','b','k','q','b','h','r'
 
 
@@ -5710,7 +5710,7 @@ notq2:
   notk2:
 
 ; ;! Horse
-    cmp bl,"H"
+      cmp bl,"H"
       jne nothhelp2
       jmp yesh2
       nothhelp2:
@@ -6180,22 +6180,19 @@ notq2:
         mov getcol,ch
       popa
 
-      add getcol,2
+      inc getCol
+      inc getCol
       inc getrow
 
 
+      mov cl,getrow
+      cmp cl,8
+      je nodiagonalRhelph82
       mov cl,getCol
       cmp cl,8
       je nodiagonalRhelph82
       mov cl,getCol
       cmp cl,9
-      je nodiagonalRhelph82
-      mov cl,getrow
-      cmp cl,8
-      je nodiagonalRhelph82
-      ;? error here ch and cl 
-      mov ch,getCol
-      cmp ch,9
       je nodiagonalRhelph82
       pusha
         Call FAR PTR getCellData
@@ -6219,18 +6216,18 @@ notq2:
     pop si
       jmp notenemyDRh82
       enemyDRh82:
-      ;mov ch,getcol
-      ;mov cl,getrow
+        mov ch,getcol
+        mov cl,getrow
         mov [si],cl
         mov [di],ch
         inc si
         inc di
-         push si
-    lea si,CurrentMovesColors
-    add si,ColorOffset
+        push si
+    lea si,CurrentMovesColors2
+    add si,ColorOffset2
     mov cx,0ch
     mov [si],cx
-    inc ColorOffset
+    inc ColorOffset2
     pop si
         ; change color ya ali
       notenemyDRh82:
@@ -6507,6 +6504,13 @@ releaseClipBoard1 proc far
   mov [bx],cx
   popa
   
+
+  mov cl,getrow
+  mov brushRow,cl
+
+  mov ch,getCol
+  mov brushCol,ch
+
   cmp clipBoardP2,'*'
   je ppp
   mov cl,getrow
@@ -6516,17 +6520,17 @@ releaseClipBoard1 proc far
   cmp ch,clipBoardP2[2]
   jne ppp
   pusha
-  CALL FAR PTR ClearHighlighted2
+    CALL FAR PTR ClearHighlighted2
   popa
-  Call Far ptr resetcurrentmoves2
+
+  pusha
+    Call Far ptr resetcurrentmoves2
+  popa
+
   mov clipBoardP2,'*'
   mov P2validateBool,0
   ppp:
-  mov cl,getrow
-  mov brushRow,cl
 
-  mov ch,getCol
-  mov brushCol,ch
   cmp clipBoardP1,'k'
   jne proceed
   pusha
@@ -6743,6 +6747,12 @@ releaseClipBoard2 proc far
   mov [bx],cx
   popa
 
+  mov cl,getrow
+  mov brushRow,cl
+
+  mov ch,getCol
+  mov brushCol,ch
+
   cmp clipBoardP1,'*'
   je ppp2
   mov cl,getrow
@@ -6758,11 +6768,7 @@ releaseClipBoard2 proc far
   mov clipBoardP1,'*'
   mov P1validateBool,0
   ppp2:
-  mov cl,getrow
-  mov brushRow,cl
-
-  mov ch,getCol
-  mov brushCol,ch
+ 
   cmp clipBoardP2,'K'
   jne proceed2
   pusha
