@@ -296,7 +296,7 @@ msg2 db "To End The Program Press ESC $"
 
 OldPieces   DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
-            DB '*','*','*','*','*','*','*','*'
+            DB '*','*','*','p','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
@@ -8034,7 +8034,8 @@ jmp cont10
   mov ch,q1
 
   nextnext:
-
+  mov cl,q1[1]
+mov ch,q1
   cmp ch,0
   je nextnext2
   cmp cl,0
@@ -8487,6 +8488,7 @@ mov ch,q2
   mov cl,q2[1]
   mov ch,q2
 ;!Down
+
     chckdowns:
     cmp ch,7
     je nextchck3s
@@ -8657,7 +8659,8 @@ jmp cont10s
   mov ch,q2
 
   nextnexts:
-
+  mov cl,q2[1]
+mov ch,q2
   cmp ch,7
   je nextnext2s
   cmp cl,0
