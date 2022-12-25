@@ -294,9 +294,14 @@ msg2 db "To End The Program Press ESC $"
 
 ; Color Matrix
 
+
+
+
+
+
 OldPieces   DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
-            DB '*','*', '*','*','*','*','*','*'
+            DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
@@ -7660,6 +7665,8 @@ RESETGAME PROC FAR
   mov Player1square[1],4
   mov Player2square,1
   mov Player2square[1],4
+  mov P1validateBool,0
+  mov P2validateBool,0
   mov P1Status,20
   mov q2 , 0
   mov q2[1],3
@@ -7675,8 +7682,22 @@ mov P2Status[1],3
 
 mov Secs,0
 mov Mins,0
-CALL FAR PTR resetcurrentmoves1
-CALL FAR PTR resetcurrentmoves2
+
+PUSHA
+  CALL FAR PTR resetcurrentmoves1
+POPA
+PUSHA
+  CALL FAR PTR resetcurrentmoves2
+POPA
+pusha
+  call far ptr clearhighlight
+popa
+pusha
+  call far ptr clearhighlight2
+popa
+
+mov clipBoardP1,"*"
+mov clipBoardP2,"*"
 
 
 ret
