@@ -356,6 +356,7 @@ f4bool db 0
 playtime dw 0
 
 
+dispMins db 0,0
 Secs db 0
 Mins db 0
 dispsecs db 0,0
@@ -7683,6 +7684,7 @@ mov P2Status[1],3
 mov Secs,0
 mov Mins,0
 
+
 PUSHA
   CALL FAR PTR resetcurrentmoves1
 POPA
@@ -7747,6 +7749,20 @@ mov dispsecs[1],ah
 popa
 
 
+pusha
+mov al,Mins
+mov ah,0
+mov cl,10
+div cl
+
+add al,30h
+add ah,30h
+
+mov dispMins,al
+mov dispMins[1],ah
+popa
+
+
 mov playtime,ax
 mov  dl, 17   ;Column
 mov  dh, 24   ;Row
@@ -7766,13 +7782,14 @@ mov  bl, 03h  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
-mov  al, '0'
+
+mov  al, dispMins
 mov  bl, 03h  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
-mov  al, Mins
-add al,30h
+
+mov  al, dispMins[1]
 mov  bl, 03h  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
