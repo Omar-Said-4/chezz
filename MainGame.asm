@@ -296,7 +296,7 @@ msg2 db "To End The Program Press ESC $"
 
 OldPieces   DB 'R','H','B','K','Q','B','H','R'
             DB 'P','P','P','P','P','P','P','P'
-            DB '*','*','*','*','*','*','*','*'
+            DB '*','*', '*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
             DB '*','*','*','*','*','*','*','*'
@@ -8015,7 +8015,7 @@ jmp cont10
   cont10:
 
 
-  ;!pawnCheck
+;!pawnCheck
   mov cl,q1[1]
   mov ch,q1
   cmp ch,0
@@ -8209,7 +8209,7 @@ mov ch,q1
   cmp ch,6
   jae nextnext8
   cmp cl,0
-  jae nextnext8
+  je nextnext8
   inc ch
   inc ch
   dec cl
@@ -8846,7 +8846,7 @@ mov ch,q2
   cmp ch,6
   jae nextnext8s
   cmp cl,0
-  jae nextnext8s
+  je nextnext8s
   inc ch
   inc ch
   dec cl
@@ -8909,7 +8909,7 @@ mov ch,q2
   cmp currPiece,'*'
   je nextnext10s
   cmp currPiece,'Z'
-  ja nextnext10s
+  jb nextnext10s
   cmp currPiece,'h'
   je checkmate2
 
