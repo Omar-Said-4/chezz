@@ -306,6 +306,10 @@ OldPieces   DB 'R','H','B','K','Q','B','H','R'
 
 
 
+
+
+
+
 Board DB 7,8,7,8,7,8,7,8
       DB 8,7,8,7,8,7,8,7
       DB 7,8,7,8,7,8,7,8
@@ -7657,6 +7661,11 @@ RESETGAME PROC FAR
   mov Player2square,1
   mov Player2square[1],4
   mov P1Status,20
+  mov q2 , 0
+  mov q2[1],3
+  mov q1,7
+  mov q1[1],3
+  
 
   mov P2Status,20
 
@@ -8144,6 +8153,7 @@ mov ch,q1
   
   mov cl,q1[1]
   mov ch,q1
+  
   cmp ch,7
   je nextnext6
   cmp cl,6
@@ -8168,7 +8178,7 @@ mov ch,q1
   cont60:
   nextnext6:
 
-   mov cl,q1[1]
+  mov cl,q1[1]
   mov ch,q1
   cmp ch,6
   jae nextnext7
@@ -8301,25 +8311,25 @@ mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'M'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'A'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'T'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'E'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
@@ -8944,25 +8954,25 @@ mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'M'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'A'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'T'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
 int  10h
 
-mov  al, 'E'
+mov  al, ' '
 mov  bl, 0ch  ;Color is red
 mov  bh, 0    ;Display page
 mov  ah, 0eh  ;Teletype
