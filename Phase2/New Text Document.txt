@@ -1,0 +1,1 @@
+serial1 = directserial realport:COM1
