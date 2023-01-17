@@ -731,7 +731,10 @@ main proc FAR
              in al , dx
              cmp al,'c'
              je chathelp
-             cmp al,'r' 
+              cmp al,'e'
+             je terminatehelper
+
+              cmp al,'r' 
              jne notrecchat
                  mov ah,2  
               mov dl,25
@@ -777,9 +780,15 @@ main proc FAR
              in al , dx
              cmp al,'g'
              je ppl
+            cmp al,'e'
+             je terminatehelper
+             jmp ntermm
+             terminatehelper:
+             jmp terminate
+             ntermm:
              cmp al,'r' 
              jne notrecchat2
-                 mov ah,2  
+             mov ah,2  
               mov dl,25
               mov dh,20
               int 10h
