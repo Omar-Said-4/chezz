@@ -37,10 +37,11 @@
 🔵 For both versions to run through `DOSBOX`
 1. Download all files in this Repository related to a specific version.
 2. Download `DOSBOX`, `MASM.exe`, `LINK.exe`.
-3. Mount the Folder in the `DOSBox`.
-4. Assemble the Game Folder Name in the `DOSBox` using `MASM`.
-5. LINK the Game folder generated object file.
-6. Type Game name and enjoy playing.
+3. Put the game asm file together with `MASM.exe`, `LINK.exe` in one file.
+4. Mount the Folder in the `DOSBox`.
+5. Assemble the Game Folder Name in the `DOSBox` using `MASM`.
+6. LINK the Game folder generated object file.
+7. Type Game name and enjoy playing.
 
 ## Controls
 🔵 For Local Version
