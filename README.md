@@ -31,6 +31,16 @@
 * if an enemy is within the moving space it will be highlighted in red.
 * Red cells are cells with pieces undergoing cooldown.
 ## How to run?
-🔵 For the local
+🔵 For the local version
+* If you're using `DOSBOX` through `VSCODE` then simply copy the content of `MainGame.asm` to the workspace (no need to install DOSBOX).
+
+🔵 For both versions to rin through DOSBOX
+1. Download all files in this Repository related to a specific version.
+2. Download `DOSBOX`, `MASM.exe`, `LINK.exe`.
+3. Mount the Folder in the `DOSBox`.
+4. Assemble the Game Folder Name in the `DOSBox` using `MASM`.
+5. LINK the Game folder generated object file.
+6. Type Game name and enjoy playing/
+
 
 
