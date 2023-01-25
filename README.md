@@ -44,11 +44,30 @@
 
 ## Controls
 🔵 For Local Version
-### **Player1 is black and Player2 is white**
-* `Up Arrow`, `Down Arrow`, `Right Arrow`,`Left Arrow` control the movement of player 1 cell to choose a specific piece.
-* `W`, `A`, `S`,`D` control the movement of player 2 cell to choose a specific piece.
+#### **Player1 is black and Player2 is white**
+* `F2`, to start game.
+* `Up Arrow`, `Down Arrow`, `Right Arrow`,`Left Arrow` control the movement of player 1 cell to choose a specific piece or cell.
+* `W`, `A`, `S`,`D` control the movement of player 2 cell to choose a specific piece or cell.
 * `Enter Key` is used to choose or release a specific piece for player1.
 * `Q` is used to choose or release a specific piece for player2.
+
+🔵 For Global Version
+#### **On your device you are always Player1 which is black**
+** any pressed button affects the both sides**
+* First enter your name and wait until the other player is connected through the notification bar.
+* `F1`, to send or accept a chat invitation.
+* `F2`, to send or accept a game invitation.
+* `F3`, to exit chatting mode.
+* `F4`, to exi game mode.
+* `F7`, to refuse a chat or a game invitation.
+* `escape`, to exit game.
+* `Up Arrow`, `Down Arrow`, `Right Arrow`,`Left Arrow` control the movement of player1 cell to choose a specific piece or cell.
+* * `F10` is used to choose or release a specific piece for player1.
+*  In chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
+*  In inline chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
+*  Both chatting modes support scrolling.
+
+
 
 
 
