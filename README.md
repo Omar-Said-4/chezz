@@ -34,13 +34,24 @@
 🔵 For the local version
 * If you're using `DOSBOX` through `VSCODE` then simply copy the content of `MainGame.asm` to the workspace (no need to install DOSBOX).
 
-🔵 For both versions to rin through DOSBOX
+🔵 For both versions to run through `DOSBOX`
 1. Download all files in this Repository related to a specific version.
 2. Download `DOSBOX`, `MASM.exe`, `LINK.exe`.
 3. Mount the Folder in the `DOSBox`.
 4. Assemble the Game Folder Name in the `DOSBox` using `MASM`.
 5. LINK the Game folder generated object file.
-6. Type Game name and enjoy playing/
+6. Type Game name and enjoy playing.
+
+## Controls
+🔵 For Local Version
+### **Player1 is black and Player2 is white**
+* `Up Arrow`, `Down Arrow`, `Right Arrow`,`Left Arrow` control the movement of player 1 cell to choose a specific piece.
+* `W`, `A`, `S`,`D` control the movement of player 2 cell to choose a specific piece.
+* `Enter Key` is used to choose or release a specific piece for player1.
+* `Q` is used to choose or release a specific piece for player2.
+
+
+
 
 
 
