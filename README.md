@@ -25,10 +25,11 @@
 ## Game Rules and Guidlines
 
 * There are no turns.
-* after each piece move there is a cooldown period of 3 seconds, during this period you can't move that piece again.
-* checks are unlimited.
-* on choosing a specific piece all available moving space will be highlighted.
-* if an enemy is within the moving space it will be highlighted in red.
+* Game is over only when one of the kings is dead.
+* After each piece move there is a cooldown period of 3 seconds, during this period you can't move that piece again.
+* Checks are unlimited.
+* On choosing a specific piece all available moving space will be highlighted.
+* If an enemy is within the moving space, it will be highlighted in red.
 * Red cells are cells with pieces undergoing cooldown.
 ## How to run?
 🔵 For the local version
