@@ -25,7 +25,7 @@
 ## Game Rules and Guidlines
 
 * There are no turns.
-* after each piece move there is a cooldown period of 3 seconds, during this period you can't move that piece.
+* after each piece move there is a cooldown period of 3 seconds, during this period you can't move that piece again.
 * checks are unlimited.
 * on choosing a specific piece all available moving space will be highlighted.
 * if an enemy is within the moving space it will be highlighted in red.
