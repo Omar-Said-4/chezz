@@ -62,7 +62,7 @@
 * `F7`, to refuse a chat or a game invitation.
 * `escape`, to exit game.
 * `Up Arrow`, `Down Arrow`, `Right Arrow`,`Left Arrow` control the movement of player1 cell to choose a specific piece or cell.
-* * `F10` is used to choose or release a specific piece for player1.
+* `F10` is used to choose or release a specific piece for player1.
 *  In chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
 *  In inline chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
 *  Both chatting modes support scrolling.
