@@ -711,6 +711,8 @@ main proc FAR
               je yeschat
               jmp nonochat
               yeschat:
+              cmp playbool,1
+              je nonochat
               CALL FAR PTR startchatnotif
               sendchatt:
               mov dx , 3FDH 
@@ -759,6 +761,8 @@ main proc FAR
               cmp ah,60
               je lesgo
               jmp nonochat2
+              cmp chatbool,1
+              je nonochat2
               lesgo:
               CALL FAR PTR startgamenotif
               sendchatt232:
