@@ -73,7 +73,7 @@
   This game will undergo further developments in the future 
 </p> 
 <p align="center">
-  Thank You 
+  Thank You 😁
 </p>
 </h2>
 
