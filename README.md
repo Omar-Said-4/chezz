@@ -69,7 +69,9 @@
 *  In inline chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
 *  Both chatting modes support scrolling.
 
-
+<p align="center">
+  ##Thank You##
+</p>
 
 
 
