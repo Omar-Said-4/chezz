@@ -14,10 +14,14 @@
 🔵 You don't need to assemble multiple files to run the game just one file.
 
 🔵 Photos used to draw pieces can be found in `Photos` folder.
+
 🔵 Global version Has two modes:
  1. `Game Mode`.  
  2. `Chat Mode`.
  * Global Game has inline chatting provided.
+
+🔵 Localversion doesn't have inline chatting or chatting modes.
+
 ## Game Rules and Guidlines
 
 * There are no turns.
@@ -26,7 +30,6 @@
 * on choosing a specific piece all available moving space will be highlighted.
 * if an enemy is within the moving space it will be highlighted in red.
 * Red cells are cells with pieces undergoing cooldown.
-* Localversion doesn't have inline chatting or chatting modes.
 ## How to run?
 🔵 For the local
 
