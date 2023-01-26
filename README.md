@@ -70,8 +70,8 @@
 *  In inline chatting mode any key pressed will appear on both playeers' screens, `Enter` is pressed for a new line
 *  Both chatting modes support scrolling.
 
- <p align="center" size=20>
-  Tutorial Video: https://drive.google.com/file/d/1Qn1cow6rkvWL3wDd_U_w7oVsDaV_LQnl/view 
+ <p size=20>
+  Game Video: https://drive.google.com/file/d/1Qn1cow6rkvWL3wDd_U_w7oVsDaV_LQnl/view 
 </p> 
 <h2>
 <p align="center" size=20>
