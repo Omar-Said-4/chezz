@@ -54,7 +54,7 @@
 * `Q` is used to choose or release a specific piece for player2.
 * `escape`, to exit game.
 
-🔵 For Global Version
+🔵 For Server Version
 #### **On your device you are always Player1 which is black**
 **any pressed button affects the both sides**
 * First enter your name and wait until the other player is connected through the notification bar.
