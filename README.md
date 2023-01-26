@@ -71,7 +71,7 @@
 *  Both chatting modes support scrolling.
 
  <p size=20>
-  Game Video: https://drive.google.com/file/d/1Qn1cow6rkvWL3wDd_U_w7oVsDaV_LQnl/view 
+ 🔵 Game Video: https://drive.google.com/file/d/1Qn1cow6rkvWL3wDd_U_w7oVsDaV_LQnl/view 
 </p> 
 <h2>
 <p align="center" size=20>
