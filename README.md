@@ -15,12 +15,12 @@
 
 🔵 Photos used to draw pieces can be found in `Photos` folder.
 
-🔵 Global version Has two modes:
+🔵 Server version Has two modes:
  1. `Game Mode`.  
  2. `Chat Mode`.
- * Global Game has inline chatting provided.
+ * Server Game has inline chatting provided.
 
-🔵 Localversion doesn't have inline chatting or chatting modes.
+🔵 Local version doesn't have inline chatting or chatting modes.
 
 ## Game Rules and Guidlines
 
